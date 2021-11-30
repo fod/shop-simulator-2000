@@ -5,10 +5,14 @@
 #include <ctype.h>
 
 // Change these to change the number of items auto-generated
-// customers will hav on their shopping list
+// customers will have on their shopping list
 // defined as macros so they can be used to size arrays
-#define ITEMS_RANGE_LOW  1	
-#define ITEMS_RANGE_HIGH 5
+#define ITEMS_LOW   1	
+#define ITEMS_HIGH  5
+#define BUDGET_LOW 	100
+#define BUDGET_HIGH 400
+#define PIECES_LOW  1
+#define PIECES_HIGH 100
 
 char STOCK_PATH[] = "../stock.csv";
 char NAMES_PATH[] = "../names.list";
@@ -56,9 +60,9 @@ struct Customer {
 	char* name;
 	char* face;
 	double budget;
-	struct ProductStock shoppingList[ITEMS_RANGE_HIGH];
+	struct ProductStock shoppingList[ITEMS_HIGH];
 	size_t sl_index;
-	struct ProductStock receipt[ITEMS_RANGE_HIGH];
+	struct ProductStock receipt[ITEMS_HIGH];
 	size_t r_index;
 };
 
@@ -94,6 +98,7 @@ struct Shop generate_shop()
 	return shop;
 }
 
+// Detect lines containing only whitespace
 int all_space(const char *str) {
     while (*str) {
         if (!isspace(*str++)) {
@@ -103,6 +108,7 @@ int all_space(const char *str) {
     return 1;
 }
 
+// Return a random name from the NAMES_PATH file
 char* get_name()
 {
 	// Select a random name from the names file
@@ -127,10 +133,10 @@ char* get_name()
 	// close file handle
 	fclose(fp);
 
-	srand ( time(NULL) );
 	return names[rand() % 200][0];
 }
 
+// Return a random face from the FACES_PATH file
 char* get_face()
 {
 	FILE *fp;
@@ -161,36 +167,46 @@ char* get_face()
 			strcat(faces[i], face);
 		}
 	}
-	srand ( time(NULL) );
+
+	// close file handle
+	fclose(fp);
+
 	return faces[rand() % 19];
 }
 
-struct Customer generate_customer()
-	// struct Shop shop, int[] BUDGET_RANGE, 
-	// 							  char* NAMES_PATH, int items_range_low, 
-	// 							  int items_range_high, int[] pieces_range)	
+struct Customer generate_customer(struct Shop shop, int b_low, int b_high, 
+													int i_low, int i_high, 
+													int p_low, int p_high)
+
 {
 	struct Customer customer;
+	customer.name = get_name();
+	customer.face = get_face();
 
-
-
-
-
-	//printf("%s", faces[5]);
-
+	customer.budget = (double) (rand() % (b_high - b_low + 1) + b_low);
+	int num_items = (rand() % (i_high - i_low + 1) + i_low);
+	int num_pieces = (rand() % (p_high - p_low + 1) + p_low);
 	
+	for (int i = 0; i < num_items; i++) {
+		int index = rand() % shop.index;
+		customer.shoppingList[i] = shop.stock[index];
+		customer.shoppingList[i].quantity = num_pieces;
+	}
 
+	return customer;
+}
 
-	// while ((read = getline(&line, &len, fp)) != -1) {
-		
-	// 	printf("%s", line);
+char* stringify_product(struct Product product)
+{
+	char *string = malloc(sizeof(char) * 20);
+	int _ = sprintf(string, "%-15s%7.2f", product.name, product.price);
 
-	// 	char *name = malloc(sizeof(char) * 12);
-	// 	strcpy(name, line);
-	// 	printf("%s", name);
-	// 	return customer;
-	// }
+	return string;
+}
 
+char* stringify_shop(struct Shop shop)
+{
+	char *string = malloc(sizeof(char) * 200);
 }
 
 // void printProduct(struct Product p)
@@ -260,15 +276,21 @@ struct Customer generate_customer()
 
 int main(void) 
 {
-
+	// Set random seed
+	srand (time(NULL));
 	printf("%s\n", shopkeeper);
 	struct Shop shop = generate_shop();
 	printf("Cashola: %f\n", shop.cash);
 	// generate_customer();
 	// struct Shop shop = createAndStockShop();
 	// printShop(shop);
-	printf("%s\n", get_name());
-	printf("%s\n", get_face());
+	struct Customer customer = generate_customer(shop, BUDGET_LOW, BUDGET_HIGH, 
+													   ITEMS_LOW, ITEMS_HIGH,
+													   PIECES_LOW, PIECES_HIGH);
+	printf("%s\n", customer.name);
+	printf("%s\n", customer.face);
+
+	printf(stringify_product(customer.shoppingList[0].product));
     return 0;
 	
 }
