@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <ctype.h>
 
 // Change these to change the number of items auto-generated
 // customers will hav on their shopping list
@@ -93,13 +94,17 @@ struct Shop generate_shop()
 	return shop;
 }
 
-struct Customer generate_customer()
-	// struct Shop shop, int[] BUDGET_RANGE, 
-	// 							  char* NAMES_PATH, int items_range_low, 
-	// 							  int items_range_high, int[] pieces_range)	
-{
-	struct Customer customer;
+int all_space(const char *str) {
+    while (*str) {
+        if (!isspace(*str++)) {
+            return 0;
+        }
+    }
+    return 1;
+}
 
+char* get_name()
+{
 	// Select a random name from the names file
 	FILE *fp;
 	char *line = NULL;
@@ -123,7 +128,58 @@ struct Customer generate_customer()
 	fclose(fp);
 
 	srand ( time(NULL) );
-	printf("%s\n", names[rand() % 200][0]);
+	return names[rand() % 200][0];
+}
+
+char* get_face()
+{
+	FILE *fp;
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t read;
+
+	fp = fopen(FACES_PATH, "r");
+	if (fp == NULL) {
+		printf("Error opening file\n");
+		exit(EXIT_FAILURE);
+	}
+
+	char *faces[19];
+	int i = 0;
+	int append = 0;
+	while ((read = getline(&line, &len, fp)) != -1) {
+		char *face = malloc(sizeof(char) * 50);
+		strcpy(face, line);
+
+		if (all_space(face) == 0 && append == 0) {
+			append = 1; 
+			faces[i] = face;
+		} else if (all_space(face) == 1 && append == 1) {
+			append = 0; 
+			i++;
+		} else if (append == 1) {
+			strcat(faces[i], face);
+		}
+	}
+	srand ( time(NULL) );
+	return faces[rand() % 19];
+}
+
+struct Customer generate_customer()
+	// struct Shop shop, int[] BUDGET_RANGE, 
+	// 							  char* NAMES_PATH, int items_range_low, 
+	// 							  int items_range_high, int[] pieces_range)	
+{
+	struct Customer customer;
+
+
+
+
+
+	//printf("%s", faces[5]);
+
+	
+
 
 	// while ((read = getline(&line, &len, fp)) != -1) {
 		
@@ -208,10 +264,11 @@ int main(void)
 	printf("%s\n", shopkeeper);
 	struct Shop shop = generate_shop();
 	printf("Cashola: %f\n", shop.cash);
-	generate_customer();
+	// generate_customer();
 	// struct Shop shop = createAndStockShop();
 	// printShop(shop);
-
+	printf("%s\n", get_name());
+	printf("%s\n", get_face());
     return 0;
 	
 }
