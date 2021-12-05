@@ -125,13 +125,17 @@ def generate_customer(shop, budget_range, names_path, items_range, pieces_range)
         [type]: [description]
     """
     customer = Customer()
+
+    # Generate a random name from the names file
     with open(names_path, 'r') as f:
         names = f.readlines()
         names = [name.rstrip() for name in names]
         customer.name = random.choice(names)
 
+    # Generate a face for the customer from the faces file
     customer.face = random.choice(faces)
 
+    #
     customer.budget = random.randint(budget_range[0], budget_range[1])
     num_items = random.randint(items_range[0], items_range[1])
     items = random.sample(shop.stock, num_items)
