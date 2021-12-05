@@ -4,21 +4,21 @@
 #include <time.h>
 #include <ctype.h>
 
-// Global Variables
+// Global constants
 // Adjust auto-generated customer parameters here
-#define ITEMS_LOW   1	
-#define ITEMS_HIGH  5
-#define BUDGET_LOW 	100
-#define BUDGET_HIGH 400
-#define PIECES_LOW  1
-#define PIECES_HIGH 100
-size_t REORDER_THRESHOLD = 5;
+#define ITEMS_LOW   1		  // Lowest number of items in a customer order
+#define ITEMS_HIGH  5	      // Highest number of items in a customer order
+#define BUDGET_LOW 	100		  // Lowest budget in a customer order
+#define BUDGET_HIGH 400		  // Highest budget in a customer order
+#define PIECES_LOW  1		  // Lowest number of items of a particular item type in a customer order
+#define PIECES_HIGH 100	      // Highest number of items of a particular item type in a customer order
+size_t REORDER_THRESHOLD = 5; // Shopkeeper reorders item if stock is below this threshold
 
 // Paths to data files
-char STOCK_PATH[] = "../stock.csv";
-char NAMES_PATH[] = "../names.list";
-char FACES_PATH[] = "../faces";
-char CUSTOMERS_PATH[] = "../customer.csv";
+char STOCK_PATH[] = "../stock.csv";				// Stock, quantities, prices, plus initial shop cash
+char NAMES_PATH[] = "../names.list";			// List of 200 names for customers
+char FACES_PATH[] = "../faces";					// 19 ASCII art faces for customers
+char CUSTOMERS_PATH[] = "../customer.csv";		// Saved andomly generated customers go here
 
 char LINE[] = "------------------------------------\n";
 // The shopkeeper's face
@@ -32,12 +32,12 @@ char shopkeeper[] = "       _www_ \n"
 struct Product {
 	char* name;
 	double price;
-	size_t max_quantity;
+	int max_quantity; 
 };
 
 struct ProductStock {
 	struct Product product;
-	size_t quantity;
+	int quantity;
 };
 
 struct Shop {
@@ -59,8 +59,7 @@ struct Customer {
 // Clear the console by printing 100 newlines
 void clear_console() 
 {
-	for (int i = 0; i < 100; i++)
-	{
+	for (int i = 0; i < 100; i++) {
   		printf ("\n");
 	}
 }	
@@ -73,33 +72,49 @@ void wait_for_input(char* message)
 	while (enter != '\r' && enter != '\n') { enter = getchar(); }
 }
 
+// Initialise a shop struct
 struct Shop generate_shop()
 {
-    FILE *fp;
-    char *line = NULL;
-    size_t len = 0;
-    ssize_t read;
 
+    FILE *fp;				// filehandle
+    char *line = NULL;		// line buffer
+    size_t len = 0;         // line length
+    ssize_t read;           // number of bytes read
+
+	// Open stock csv file
     fp = fopen(STOCK_PATH, "r");
-    if (fp == NULL)
+    if (fp == NULL) {
+		printf("Error opening file\n");
         exit(EXIT_FAILURE);
+	}
 
+	// The first line of stock.csv holds the shop's cash amount
 	read = getline(&line, &len, fp);
 	float cash = atof(line);
 	
-	struct Shop shop = { cash };
+	// Initialise shop struct and add cash
+	struct Shop shop;
+	shop.cash = cash;
 
+	// Shop index is the index of the last item in the stock array
 	shop.index = 0;
+	// Read stock.csv line by line
     while ((read = getline(&line, &len, fp)) != -1) {
+		// Split line into name, price, max_quantity
 		char *n = strtok(line, ",");
 		char *p = strtok(NULL, ",");
 		char *q = strtok(NULL, ",");
+		// convert quantity and price strings to int & double
 		int quantity = atoi(q);
 		double price = atof(p);
+		// 50 characters for name
 		char *name = malloc(sizeof(char) * 50);
-		strcpy(name, n);	
-		struct Product product = { name, price };
+		strcpy(name, n);
+		// Initialise Product struct for new product
+		struct Product product = { name, price, quantity };
+		// Initialise ProductStock struct for quanitity of that product
 		struct ProductStock stockItem = { product, quantity };
+		// Add product to stock list and increment shop index
 		shop.stock[shop.index++] = stockItem;
     }
 	
@@ -130,7 +145,7 @@ char* get_name()
 		exit(EXIT_FAILURE);
 	}
 
-	char * names[200][12];
+	char *names[200][12];
 	for (int i = 0; i < 200; i++) {
 		char *name = malloc(sizeof(char) * 12);
 		fgets(name, 12, fp);
@@ -282,43 +297,71 @@ char* stringify_customer(struct Customer customer)
 	return string;
 }
 
+/* The main transaction logic of the application */
 void transact(struct Shop *shop, struct Customer *customer)
 {
-	for (int i = 0; i <= customer->sl_index-1; i++) {
+	/* For each shopping list entry find the 
+        equivalent shop product stock entry */
+	for (int i = 0; i < customer->sl_index; i++) {
 		for (int j = 0; j < shop->index; j++) {
-			if (strcmp(customer->shoppingList[i].product.name, shop->stock[j].product.name) == 0) {
-				// shop.stock[j].quantity -= customer.shoppingList[i].quantity;
-				if (customer->shoppingList[i].quantity > shop->stock[j].quantity) {
-					printf("%s wants %d x %s but only %d are available.\n", customer->name, 
-					customer->shoppingList[i].quantity, customer->shoppingList[i].product.name, 
-					shop->stock[j].quantity);
-					customer->shoppingList[i].quantity = shop->stock[j].quantity;
-				} 
-				if (customer->budget < (customer->shoppingList[i].product.price * customer->shoppingList[i].quantity)) {
-					customer->shoppingList[i].quantity = (int)(customer->budget / customer->shoppingList[i].product.price);
 
-					if (customer->shoppingList->quantity == 0) {
-						printf("%s can't afford any %s.\n", customer->name, customer->shoppingList[i].product.name);
+			/* Short local variable names to make 
+			   the transaction logic more readable */
+			const char *prod_c = customer->shoppingList[i].product.name;
+			const char *prod_s = shop->stock[j].product.name;
+			int quant_c  = customer->shoppingList[i].quantity;
+			int quant_s  = shop->stock[j].quantity;
+			const double price = customer->shoppingList[i].product.price;
+			
+			/* When the shop product entry for the 
+			   customer shopping list product is found ... */
+			if (strcmp(prod_c, prod_s) == 0) {
+
+				/* If the customer wants more than the shop has, the customer 
+				   must adjust his expectations and so the quantity of that 
+				   product desired in the shopping list is changed to the amount 
+				   of that product remaining in the shop */
+				if (quant_c > quant_s) {
+					printf("%s wants %d x %s but only %d are available.\n", 
+							customer->name, quant_c, prod_c, quant_s);
+
+					customer->shoppingList[i].quantity = quant_s;
+					quant_c = customer->shoppingList[i].quantity;
+				} 
+
+				/* If the customer can't afford as many units of the product as the 
+				   shopping list specifies, the quantity she can afford is calculated */
+				if (customer->budget < (price * quant_c)) {
+
+					customer->shoppingList[i].quantity = (int)(customer->budget / price);
+					quant_c = customer->shoppingList[i].quantity;
+					
+					if (quant_c == 0) {
+						printf("%s can't afford any %s.\n", customer->name, prod_c);
 					}
 					else {
-						printf("%s can only afford %d x %s.\n", customer->name, 
-						customer->shoppingList[i].quantity, customer->shoppingList[i].product.name);
+						printf("%s can only afford %d x %s.\n", 
+						customer->name, quant_c, prod_c);
 					}
 				}
-				printf("%s buys %d x %s for %.2f.\n", customer->name, customer->shoppingList[i].quantity, 
-				customer->shoppingList[i].product.name, 
-				(customer->shoppingList[i].product.price * customer->shoppingList[i].quantity));
-				shop->stock->quantity -= customer->shoppingList[i].quantity;
-				shop->cash += (customer->shoppingList[i].product.price * customer->shoppingList[i].quantity);
-				customer->budget -= (customer->shoppingList[i].product.price * customer->shoppingList[i].quantity);
+				
+				/* The transaction occurs here */
+				printf("%s buys %d x %s for %.2f.\n", 
+					    customer->name, quant_c, prod_c, (price * quant_c));
+				// Take the quantity purchased away from shop stock
+				shop->stock[j].quantity -= quant_c;
+				// Increment shop cash by appropriate amount
+				shop->cash += (price * quant_c);
+				// Deduct cost of items from customer
+				customer->budget -= (price * quant_c);
+				// Append purchase to customer's receipt and increment the receipt index
 				customer->receipt[customer->r_index] = customer->shoppingList[i];
 				customer->r_index++;
 				printf("%s has \u20AC%.2f left.\n\n", customer->name, customer->budget);
 			}
 		}
 	}
-	shop->cash += total_bill(*customer);
-	customer->budget -= total_bill(*customer);
+
 	wait_for_input("Press enter to continue.");
 	clear_console();
 	printf("%s\n", shopkeeper);
@@ -327,24 +370,28 @@ void transact(struct Shop *shop, struct Customer *customer)
 	printf("%s\n", stringify_bill(*customer));
 }
 
-void restock(struct Shop *shop, struct Product product)
+void restock(struct Shop *shop, char* product)
 {
 	for (int i = 0; i < shop->index; i++) {
-		if (strcmp(shop->stock[i].product.name, product.name) == 0) {
+		if (strcmp(shop->stock[i].product.name, product) == 0) {
 			int current_quantity = shop->stock[i].quantity;
+			
 			shop->stock[i].quantity = shop->stock[i].product.max_quantity;
-			shop->cash -= product.price * (product.max_quantity - current_quantity);
+			shop->cash -= shop->stock[i].product.price * (shop->stock[i].product.max_quantity - current_quantity);
 		}
 	}
 }
 
-char* check_stock(struct Shop shop, int reorder_threshold)
+char** check_stock(struct Shop *shop, int reorder_threshold, int *num_out_of_stock)
 {
-	char *out_of_stock[shop.index]; //= malloc(sizeof *out_of_stock * 100);
-	for (int i=0; i < shop.index; i++) {
-		if (shop.stock[i].quantity < reorder_threshold) {
-			out_of_stock[i] = shop.stock[i].product.name;
-			restock(&shop, shop.stock[i].product);
+	char** out_of_stock = NULL;
+	for (int i = 0; i < shop->index; i++) {
+		if (shop->stock[i].quantity <= reorder_threshold) {
+			(*num_out_of_stock)++;
+			out_of_stock = realloc(out_of_stock, sizeof num_out_of_stock * sizeof(char*));
+			size_t len = strlen(shop->stock[i].product.name);
+			out_of_stock[*num_out_of_stock - 1] = malloc(sizeof(char)*len);
+			strcpy(out_of_stock[*num_out_of_stock - 1], shop->stock[i].product.name);
 		}
 	}
 	return out_of_stock;
@@ -370,18 +417,36 @@ void auto_mode()
 		// Check if any items are out of stock
         clear_console();
         printf("%s\n", shopkeeper);
-        printf("Better take a look in the stockroom.");
-		char* out_of_stock = check_stock(shop, REORDER_THRESHOLD);
-		if (strlen(out_of_stock) == 0) {
-			printf("Everything seems ok.\n");
+        printf("Better take a look in the stockroom.\n\n");
+
+		int num_out_of_stock = 0;
+		char **out_of_stock = check_stock(&shop, REORDER_THRESHOLD, &num_out_of_stock);
+		wait_for_input("Press Enter to continue.");
+		clear_console();
+		printf("%s\n", shopkeeper);
+		if (out_of_stock) {
+			printf("The following items are out of stock:\n");
+			for (int i = 0; i < num_out_of_stock; i++) {
+				printf("%s\n", out_of_stock[i]);
+			}
+			printf("%s", stringify_shop(shop));
+			wait_for_input("Press Enter to continue.");
+			clear_console();
+			printf("%s\n", shopkeeper);
+			for (int i = 0; i < num_out_of_stock; i++) {
+				printf("Restocking %s...\n", out_of_stock[i]);
+				restock(&shop, out_of_stock[i]);
+				free(out_of_stock[i]);
+			}
 		}
 		else {
-			printf("%s", out_of_stock);
+			printf("Everything seems to be ok.\n");
 		}
+
 		printf("%s", stringify_shop(shop));
 		wait_for_input("Press Enter to continue.");
+		clear_console();
 	}
-
 }
 
 int main(void) 
