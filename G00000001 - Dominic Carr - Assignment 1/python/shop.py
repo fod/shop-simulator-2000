@@ -369,30 +369,78 @@ def preset_mode(shop):
 def live_mode(shop):
     # List of item names for easy selection
     item_names = [name for name in [item.product.name.lower() for item in shop.stock]]
+    min_price = min([item.product.price for item in shop.stock])
     clear_console()
     print(shopkeeper)
     print("Hello, I'm the shopkeeper. Welcome to my shop.")
+    print("I hope you don't mmind me asking but how much money have you got?")
+    budget = float(input("\N{euro sign} "))
+    print("Well it's not much but hopefully you'll be able to find something you can afford.")
     while(True):
+        # End transaction if customer hasn't got enough money to buy anything
+        if budget < min_price:
+            print(f"You've only got \N{euro sign}{budget:.2f} left. The cheapest item I have costs \N{euro sign}{min_price:.2f}.")
+            print("come back when you have more money.")
+            break
+
+        # Get item request from customer
         print("Would you like to see my stock?")
         if input("(y/n): ").lower() == "y":
             print(stringify_shop(shop))
+            print(shopkeeper)
             print("You can select a product to buy by number or name.")
             selection = input("Enter product number or name: ")
         else:
             print("OK, Looks like you know what you want.")
             print("So what'll it be?")
             selection = input("Enter product name or number: ")
-
+        item = None
         if selection.isdigit():
             item = shop.stock[int(selection) - 1]
         elif selection.lower() in item_names:
-                item = shop.stock[item_names.index(selection)]
-        else:
-            print(f"I'm sorry, I don't have that. How about some nice",
+            item = shop.stock[item_names.index(selection)]
+
+        #  Restart transaction if a non-existent or out of stock item is selected
+        if item is None or item.quantity == 0:
+            print(f"I'm sorry, I'm all out of that. How about some nice",
                   f"{random.choice(item_names)} instead?")
             continue
-
+        
+        # Get quantity request from customer
         print(f"{item.product.name} costs \N{euro sign}{item.product.price:.2f}.")
+        print(f"How many would you like?")
+        quantity = int(input("\N{number sign} "))
+
+        # If customer wants more than is in stock
+        if quantity > item.quantity:
+            print(f"Sorry, I don't have that many {item.product.name}s.")
+            quantity = item.quantity
+        # If customer wants more than they can afford
+        if (item.quantity * item.product.price) > budget:
+            quantity = int(budget / item.product.price)
+            print(f"You can't afford that many. You can only get {quantity} with \N{euro sign}{budget:.2f}")
+        # Make offer and elicit confirmation of purchase from customer
+        print(f"I can give you {quantity} for \N{euro sign}{quantity * item.product.price}.")
+        print("Do you want them?")
+        # Do some stock management and accounting
+        if input("(y/n): ").lower() == "y":
+            item.quantity -= quantity
+            shop.cash += quantity * item.product.price
+            budget -= quantity * item.product.price
+        else:
+            print("OK, Never mind.")
+        
+        # Give customer opportunity to leave shop or continue
+        print(f"You have \N{euro sign}{budget:.2f} left.")
+        print("Would you like to buy something else?")
+        if input("(y/n): ").lower() == "y":
+            continue
+        else:
+            print("OK, thank you. Come again.")
+            break
+
+
+
 
 def generate_customers(num_customers, shop, budget_range, names_path, 
                        items_range, pieces_range, file_path):
