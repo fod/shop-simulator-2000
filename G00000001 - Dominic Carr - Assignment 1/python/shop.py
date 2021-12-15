@@ -34,6 +34,11 @@ shopkeeper = r"""
 def clear_console():
     print("\n" * 100)
 
+def cont_or_quit(shop=None):
+    choice = input("Press Enter to continue or 'Q' to return to main menu: ")
+    if choice.lower() == 'q':
+        main_menu(shop)
+
 # Each product has a name and a price
 @dataclass
 class Product:
@@ -42,20 +47,22 @@ class Product:
     max_quantity: int
 
 # A product's quantity in stock
-@dataclass 
+@dataclass
 class ProductStock:
     product: Product
     quantity: int
 
 # The shop has an amount of cash and a list of products
-@dataclass 
+@dataclass
 class Shop:
     cash: float = 0.0
     stock: List[ProductStock] = field(default_factory=list)
 
-# A customer has a name, a budget, 
+# A customer has a name, a budget,
 # a shopping list --> list of Products and quantity desired
 # a receipt --> list of Products and quantity purchased
+
+
 @dataclass
 class Customer:
     name: str = ""
@@ -80,11 +87,11 @@ def generate_shop():
         csv_reader = csv.reader(f)
         # The first row holds the shop's cash
         shop.cash = float(next(csv_reader)[0])
-        # Construct a list of lists. 
+        # Construct a list of lists.
         # Each list contains a product name, price, and quantity
         items = [row for row in csv_reader]
 
-    # Create Product and ProductStock data structures and 
+    # Create Product and ProductStock data structures and
     # add to the shop's stock field
     for item in items:
         # Create a Product dataclass (name, price, max_quantity)
@@ -139,6 +146,7 @@ def generate_customer(shop, budget_range, names_path, items_range, pieces_range)
 
     return customer
 
+
 def load_customers(shop, path):
     """Loads customers from a csv file. Customers are separated by a line of hyphens (-).
     Each customer record conatins the customer's name and budget on it's first line, and 
@@ -158,7 +166,7 @@ def load_customers(shop, path):
         for line in f:
             # A line of hyphens indicates the end of a customer record
             if re.match('^-+$', line):
-                 # Generate a face for the customer from the faces file
+                # Generate a face for the customer from the faces file
                 customer.face = random.choice(faces)
                 customers.append(customer)
                 customer = Customer()
@@ -170,25 +178,30 @@ def load_customers(shop, path):
                     shopping_list = True
                 else:
                     (product_name, quantity) = line.split(',')
-                    product = next(item.product for item in shop.stock if item.product.name == product_name.strip())
-                    customer.shopping_list.append(ProductStock(product, int(quantity)))
+                    product = next(
+                        item.product for item in shop.stock if item.product.name == product_name.strip())
+                    customer.shopping_list.append(
+                        ProductStock(product, int(quantity)))
 
     return customers
+
 
 def stringify_product(product):
     """Return a string representation of a product"""
     return f"{product.name:<15}{product.price:>7.2f}"
+
 
 def stringify_shop(shop):
     """Return a string representation of a shop"""
     stock = line = "-" * 36 + "\n"
     stock += ("    Item" + " " * 13 + "Price" + " " * 5 + "Stock\n" + line)
     for i, item in enumerate(shop.stock):
-        stock += (f"{i + 1:>2}. " + stringify_product(item.product) + 
+        stock += (f"{i + 1:>2}. " + stringify_product(item.product) +
                   f"{item.quantity:>10}" + "\n")
     stock += line
     cash = f"Cash: {shop.cash:>7.2f}"
     return stock + "\n" + cash + "\n" + line
+
 
 def total_bill(itemlist):
     """Return the total cost of a list of items and quantities"""
@@ -197,26 +210,31 @@ def total_bill(itemlist):
         total += item.product.price * item.quantity
     return total
 
+
 def stringify_bill(itemlist):
     """Calculate subtotals and totals for list of items and quantities and return as string"""
     out = line = "-" * 49 + "\n"
-    out += ("    Item" + " " * 13 + "Price" + " " * 5 + "Quantity" + " " * 5 + "Total\n" + line)
+    out += ("    Item" + " " * 13 + "Price" + " " *
+            5 + "Quantity" + " " * 5 + "Total\n" + line)
     for i, item in enumerate(itemlist):
-        out += (f"{i + 1:>2}. {stringify_product(item.product)}" + 
-                          f"{item.quantity:>13}" +
-                          f"{item.product.price * item.quantity:>10.2f}\n")
+        out += (f"{i + 1:>2}. {stringify_product(item.product)}" +
+                f"{item.quantity:>13}" +
+                f"{item.product.price * item.quantity:>10.2f}\n")
     out += line
     total = f"Total Cost: {total_bill(itemlist):37.2f}"
     return out + total + "\n" + line
+
 
 def stringify_customer(customer):
     """Return a string representation of a customer"""
     budget = f"Budget: {customer.budget:>7.2f}"
     return f"{customer.face}\nName: {customer.name}\n{budget}\n{stringify_bill(customer.shopping_list)}"
 
+
 def stringify_receipt(customer):
     """Pretty print a customer's receipt"""
     return stringify_bill(customer.receipt)
+
 
 def transact(shop, customer):
     """Simulate a transaction between a customer and a shop. The customer will attempt to
@@ -236,30 +254,36 @@ def transact(shop, customer):
             if item.product == stock.product:
                 # If customer wants more than shop has
                 if item.quantity > stock.quantity:
-                    print(f"{customer.name} wants {item.quantity} x {item.product.name} but only {stock.quantity} are available.")
+                    print(
+                        f"{customer.name} wants {item.quantity} x {item.product.name} but only {stock.quantity} are available.")
                     item.quantity = stock.quantity
                 # If the customer can't afford as many of an item as they want
                 if customer.budget < item.product.price * item.quantity:
                     item.quantity = int(customer.budget / item.product.price)
                     if item.quantity == 0:
-                        print(f"{customer.name} can't afford any {item.product.name}.")
+                        print(
+                            f"{customer.name} can't afford any {item.product.name}.")
                     else:
-                        print(f"{customer.name} can only afford {item.quantity} x {item.product.name}")
+                        print(
+                            f"{customer.name} can only afford {item.quantity} x {item.product.name}")
                 # The purchase is made
-                print(f"{customer.name} buys {item.quantity} x {item.product.name} for {item.product.price * item.quantity:.2f}")
+                print(
+                    f"{customer.name} buys {item.quantity} x {item.product.name} for {item.product.price * item.quantity:.2f}")
                 # Thed shop's stock and cash are updated
                 stock.quantity -= item.quantity
                 shop.cash += item.product.price * item.quantity
                 # The customers budget is update and the purchase is added to their receipt
                 customer.budget -= item.product.price * item.quantity
                 customer.receipt.append(item)
-                print(f"{customer.name} has \N{euro sign}{customer.budget:.2f} left.\n")
+                print(
+                    f"{customer.name} has \N{euro sign}{customer.budget:.2f} left.\n")
 
     # The transaction is completed and the customer's receipt is displayed
-    input("Press Enter to continue.")
+    cont_or_quit(shop)
     clear_console()
     print(shopkeeper)
-    print(f"Thank you {customer.name}. Here's your receipt. \nPlease come again.\n")
+    print(
+        f"Thank you {customer.name}. Here's your receipt. \nPlease come again.\n")
     print(f"{customer.name}'s Receipt:")
     print(stringify_bill(customer.receipt))
 
@@ -272,12 +296,13 @@ def restock(shop, product):
     Args:
         shop (dataclass): The shop
         product (dataclass): The product to restock
-    """    
+    """
     for item in shop.stock:
         if item.product == product:
             current_quantity = item.quantity
             item.quantity = item.product.max_quantity
-            shop.cash -= item.product.price * (item.product.max_quantity - current_quantity)
+            shop.cash -= item.product.price * \
+                (item.product.max_quantity - current_quantity)
 
 
 def check_stock(shop, reorder_threshold):
@@ -291,7 +316,7 @@ def check_stock(shop, reorder_threshold):
 
     Returns:
         list[str]: A lsit of the names of products that have been restocked
-    """    
+    """
     out_of_stock = []
     for item in shop.stock:
         if item.quantity <= reorder_threshold:
@@ -316,44 +341,53 @@ def shop_visit(shop, customer):
     clear_console()
     print(f"{customer.name} has come into the shop with a shopping list!")
     print(stringify_customer(customer))
-    input("Press enter to begin transaction.")
+    cont_or_quit(shop)
     clear_console()
     print(f"{customer.face}")
     print(f"{customer.name} is shopping.\n")
     transact(shop, customer)
-    input("Press Enter to continue...")
+    cont_or_quit(shop)
     # Check if any items are out of stock
     clear_console()
+    print(stringify_shop(shop))
     print(shopkeeper)
     print("Better take a look in the stockroom.")
+    # Check stock and reorder if necessary
     out_of_stock = check_stock(shop, REORDER_THRESHOLD)
+    # This is just a charade, check_stock has already done any necessary restocking
     if len(out_of_stock) == 0:
         print("Everything seems ok.")
     else:
         if len(out_of_stock) > 1:
             out_of_stock[-1] = "and " + out_of_stock[-1]
-        print(f"Yikes, I'm almost out of {out_of_stock[0]} {', '.join(out_of_stock[1:])}")
+        print(
+            f"Yikes, I'm almost out of {out_of_stock[0]} {', '.join(out_of_stock[1:])}")
         print("Better reorder")
-    print(stringify_shop(shop))
-    input("Press Enter to continue...")
+        print("Reordering... ", end="")
+        for item in out_of_stock:
+            print(item, end=" ")
+    print()
+    cont_or_quit(shop)
     take = shop.cash - cash
     return take
+
 
 def auto_mode(shop):
     """Randomly generate customers with randomised shopping lists and budgets and 
     simulate their visits to the shop. Runs until the program is interrupted"""
     while True:
-        customer = generate_customer(shop, BUDGET_RANGE, NAMES_PATH, ITEMS_RANGE, PIECES_RANGE)
+        customer = generate_customer(
+            shop, BUDGET_RANGE, NAMES_PATH, ITEMS_RANGE, PIECES_RANGE)
         shop_visit(shop, customer)
 
 
 def preset_mode(shop):
     """Loads a customers from a csv file and simulates their visits to the shop.
     The csv file has been randomly generated using the generate_customers function below."""
-    total_take = 0 
+    total_take = 0
     customers = load_customers(shop, CUSTOMERS_PATH)
     for customer in customers:
-        total_take += shop_visit(shop, customer)     
+        total_take += shop_visit(shop, customer)
     clear_console()
     print(shopkeeper)
     print("Whew, that was a long day!")
@@ -364,11 +398,19 @@ def preset_mode(shop):
     else:
         print(f"{total_take:.2f}")
         print(f"And after all that I lost \N{euro sign}{abs(total_take):.2f}.")
-    input("Press Enter to continue...")
+    cont_or_quit(shop)
+
 
 def live_mode(shop):
+    """Runs the shop in live mode. Asks the user to enter their budget then choose an item and quantity.
+    If the customer can afford the requested quantity of that item it is sold to the customer and the shop's 
+    cash and stock, and the customer's budget, are updated. If stock levels cannot meet the customer's request
+    or the customer cannot afford the requested quantity, the closest affordable quantity og the item is 
+    offered to the customer. The transaction ends when the customer quits or the customer's budget is less
+    than the price of the cheapest item in the shop."""
     # List of item names for easy selection
-    item_names = [name for name in [item.product.name.lower() for item in shop.stock]]
+    item_names = [name for name in [item.product.name.lower()
+                                    for item in shop.stock]]
     min_price = min([item.product.price for item in shop.stock])
     clear_console()
     print(shopkeeper)
@@ -379,7 +421,8 @@ def live_mode(shop):
     while(True):
         # End transaction if customer hasn't got enough money to buy anything
         if budget < min_price:
-            print(f"You've only got \N{euro sign}{budget:.2f} left. The cheapest item I have costs \N{euro sign}{min_price:.2f}.")
+            print(
+                f"You've only got \N{euro sign}{budget:.2f} left. The cheapest item I have costs \N{euro sign}{min_price:.2f}.")
             print("come back when you have more money.")
             break
 
@@ -405,7 +448,7 @@ def live_mode(shop):
             print(f"I'm sorry, I'm all out of that. How about some nice",
                   f"{random.choice(item_names)} instead?")
             continue
-        
+
         # Get quantity request from customer
         print(f"{item.product.name} costs \N{euro sign}{item.product.price:.2f}.")
         print(f"How many would you like?")
@@ -418,9 +461,11 @@ def live_mode(shop):
         # If customer wants more than they can afford
         if (item.quantity * item.product.price) > budget:
             quantity = int(budget / item.product.price)
-            print(f"You can't afford that many. You can only get {quantity} with \N{euro sign}{budget:.2f}")
+            print(
+                f"You can't afford that many. You can only get {quantity} with \N{euro sign}{budget:.2f}")
         # Make offer and elicit confirmation of purchase from customer
-        print(f"I can give you {quantity} for \N{euro sign}{quantity * item.product.price}.")
+        print(
+            f"I can give you {quantity} for \N{euro sign}{quantity * item.product.price}.")
         print("Do you want them?")
         # Do some stock management and accounting
         if input("(y/n): ").lower() == "y":
@@ -429,7 +474,7 @@ def live_mode(shop):
             budget -= quantity * item.product.price
         else:
             print("OK, Never mind.")
-        
+
         # Give customer opportunity to leave shop or continue
         print(f"You have \N{euro sign}{budget:.2f} left.")
         print("Would you like to buy something else?")
@@ -440,9 +485,7 @@ def live_mode(shop):
             break
 
 
-
-
-def generate_customers(num_customers, shop, budget_range, names_path, 
+def generate_customers(num_customers, shop, budget_range, names_path,
                        items_range, pieces_range, file_path):
     """Generate a list of random customers with randomised shopping lists and budgets.
     The ranges within which the customers' randomised atttributes are restricted are 
@@ -458,28 +501,32 @@ def generate_customers(num_customers, shop, budget_range, names_path,
         pieces_range (tuple(int)): The minimum and maximum possible number units of each item
                                    on each customer's shopping list
         file_path (str): The path to the output csv file
-    """                       
+    """
     print("Generating customers...")
     with open(file_path, 'w') as f:
         writer = csv.writer(f)
         for i in range(num_customers):
-            customer = generate_customer(shop, budget_range, names_path, items_range, pieces_range)
+            customer = generate_customer(
+                shop, budget_range, names_path, items_range, pieces_range)
             writer.writerow([customer.name, f"{float(customer.budget):.2f}"])
             for item in customer.shopping_list:
                 writer.writerow([item.product.name, item.quantity])
             writer.writerow(['----------'])
     print(f"Generated {num_customers} customers.")
-    input("Press Enter to continue.")
+    cont_or_quit(shop)
 
 # Generate menu
+
+
 def displayMenu():
     clear_console()
     line = "-" * 19
     menuItems = ["Auto Mode",
                  "Preset Mode",
                  "Live Mode",
-                 "Generate Customers"]
-    
+                 "Generate Customers",
+                 "Regenerate Shop"]
+
     print(line)
     print("Shop Simulator 2000")
     print(shopkeeper)
@@ -494,9 +541,10 @@ def displayMenu():
     print("x - Exit Application")
 
 
-def main():
+def main_menu(shop=None):
 
-    shop = generate_shop()
+    if shop is None:
+        shop = generate_shop()
 
     while True:
 
@@ -510,8 +558,10 @@ def main():
         elif selection == "3":
             live_mode(shop)
         elif selection == "4":
-            generate_customers(5, shop, BUDGET_RANGE, NAMES_PATH, 
+            generate_customers(5, shop, BUDGET_RANGE, NAMES_PATH,
                                ITEMS_RANGE, PIECES_RANGE, CUSTOMERS_PATH)
+        elif selection == "5":
+            shop = generate_shop()
         elif selection == "x":
             print(shopkeeper)
             print("Thank you. Come again!")
@@ -521,7 +571,6 @@ def main():
             print("\nPlease enter a number between 1 and 6, or x to quit")
             continue
 
-if __name__ == "__main__":
-    main()
 
- 
+if __name__ == "__main__":
+    main_menu()
