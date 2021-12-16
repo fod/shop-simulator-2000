@@ -34,10 +34,35 @@ shopkeeper = r"""
 def clear_console():
     print("\n" * 100)
 
+# Continue or quit
 def cont_or_quit(shop=None):
-    choice = input("Press Enter to continue or 'Q' to return to main menu: ")
+    choice = input("Press Enter to continue or \n'Q' to return to main menu: ")
     if choice.lower() == 'q':
         main_menu(shop)
+
+# Force user to chooses one of two options
+def confirm(message, yes='y', no='n', auto=True):
+    ans = input(message + " ")
+    if auto and ans == '':
+        ans = yes
+    if ans.lower() == yes:
+        return True
+    elif ans.lower() == no:
+        return False
+    else:
+        return confirm(message, yes, no)
+
+# Get a float from user
+def getFloat(msg):
+    while (True):
+        try:
+            num = float(input(msg))
+            if num < 0:
+                raise ValueError
+            break
+        except ValueError:
+            print("Please enter a positive number.")
+    return num
 
 # Each product has a name and a price
 @dataclass
@@ -61,8 +86,6 @@ class Shop:
 # A customer has a name, a budget,
 # a shopping list --> list of Products and quantity desired
 # a receipt --> list of Products and quantity purchased
-
-
 @dataclass
 class Customer:
     name: str = ""
@@ -199,7 +222,7 @@ def stringify_shop(shop):
         stock += (f"{i + 1:>2}. " + stringify_product(item.product) +
                   f"{item.quantity:>10}" + "\n")
     stock += line
-    cash = f"Cash: {shop.cash:>7.2f}"
+    cash = f"Shop's Cash: {shop.cash:>7.2f}"
     return stock + "\n" + cash + "\n" + line
 
 
@@ -401,7 +424,7 @@ def preset_mode(shop):
     cont_or_quit(shop)
 
 
-def live_mode(shop):
+def live_mode(shop, seen):
     """Runs the shop in live mode. Asks the user to enter their budget then choose an item and quantity.
     If the customer can afford the requested quantity of that item it is sold to the customer and the shop's 
     cash and stock, and the customer's budget, are updated. If stock levels cannot meet the customer's request
@@ -414,34 +437,50 @@ def live_mode(shop):
     min_price = min([item.product.price for item in shop.stock])
     clear_console()
     print(shopkeeper)
-    print("Hello, I'm the shopkeeper. Welcome to my shop.")
-    print("I hope you don't mmind me asking but how much money have you got?")
-    budget = float(input("\N{euro sign} "))
+    if seen:
+        print("Oh hello. It's you again.")
+        print("Howm much money have you got today?")
+    else:
+        print("Hello, I'm the shopkeeper. Welcome to my shop.")
+        print("I hope you don't mind me asking but how much money have you got?")
+        seen=True
+    budget = getFloat("\N{euro sign} ")
     print("Well it's not much but hopefully you'll be able to find something you can afford.")
     while(True):
         # End transaction if customer hasn't got enough money to buy anything
         if budget < min_price:
-            print(
-                f"You've only got \N{euro sign}{budget:.2f} left. The cheapest item I have costs \N{euro sign}{min_price:.2f}.")
-            print("come back when you have more money.")
+            if budget == 0:
+                print("You don't have any money left.")
+            else: print(f"You've only got \N{euro sign}{budget:.2f} left.", 
+                        f"The cheapest item I have costs \N{euro sign}{min_price:.2f}.")
+            print("Come back when you have more money.")
+            input("Press Enter to continue")    
             break
 
         # Get item request from customer
-        print("Would you like to see my stock?")
-        if input("(y/n): ").lower() == "y":
+        if confirm("Would you like to see my stock (y/n)?"):
             print(stringify_shop(shop))
             print(shopkeeper)
-            print("You can select a product to buy by number or name.")
-            selection = input("Enter product number or name: ")
+            print("You can select a product to buy by number or name.")           
         else:
             print("OK, Looks like you know what you want.")
             print("So what'll it be?")
-            selection = input("Enter product name or number: ")
+        selection = input("Enter product number or name (or 'Q' to end transaction): ")
         item = None
         if selection.isdigit():
-            item = shop.stock[int(selection) - 1]
+            try:
+                item = shop.stock[int(selection) - 1]
+            except IndexError:
+                print("That's not a valid selection.")
+                continue
         elif selection.lower() in item_names:
             item = shop.stock[item_names.index(selection)]
+        elif selection.lower() == "q":
+                clear_console()
+                print(shopkeeper)
+                print("Thanks for shopping! Come back soon!")
+                input("Press Enter to continue")
+                break
 
         #  Restart transaction if a non-existent or out of stock item is selected
         if item is None or item.quantity == 0:
@@ -450,9 +489,9 @@ def live_mode(shop):
             continue
 
         # Get quantity request from customer
-        print(f"{item.product.name} costs \N{euro sign}{item.product.price:.2f}.")
+        print(f"{item.product.name} costs \N{euro sign}{item.product.price:.2f}")
         print(f"How many would you like?")
-        quantity = int(input("\N{number sign} "))
+        quantity = int(getFloat(f"Number of {item.product.name}: "))
 
         # If customer wants more than is in stock
         if quantity > item.quantity:
@@ -461,14 +500,15 @@ def live_mode(shop):
         # If customer wants more than they can afford
         if (item.quantity * item.product.price) > budget:
             quantity = int(budget / item.product.price)
-            print(
-                f"You can't afford that many. You can only get {quantity} with \N{euro sign}{budget:.2f}")
+            if quantity == 0:
+                print(f"You can't afford any {item.product.name}.")
+                continue
+            else:
+                print(f"You can't afford that many. You can only get {quantity} with \N{euro sign}{budget:.2f}")
         # Make offer and elicit confirmation of purchase from customer
-        print(
-            f"I can give you {quantity} for \N{euro sign}{quantity * item.product.price}.")
-        print("Do you want them?")
-        # Do some stock management and accounting
-        if input("(y/n): ").lower() == "y":
+        print(f"I can give you {quantity} for \N{euro sign}{quantity * item.product.price:.2f}.")
+        if confirm("Do you want them (y/n)?"):
+            # Do some stock management and accounting      
             item.quantity -= quantity
             shop.cash += quantity * item.product.price
             budget -= quantity * item.product.price
@@ -477,13 +517,16 @@ def live_mode(shop):
 
         # Give customer opportunity to leave shop or continue
         print(f"You have \N{euro sign}{budget:.2f} left.")
-        print("Would you like to buy something else?")
-        if input("(y/n): ").lower() == "y":
+        if confirm("Would you like to buy something else (y/n)?"):
             continue
         else:
-            print("OK, thank you. Come again.")
+            clear_console()
+            print(shopkeeper)
+            print("OK. Thanks for shopping! Come back soon!")
+            input("Press Enter to continue")
             break
 
+    return seen
 
 def generate_customers(num_customers, shop, budget_range, names_path,
                        items_range, pieces_range, file_path):
@@ -515,9 +558,18 @@ def generate_customers(num_customers, shop, budget_range, names_path,
     print(f"Generated {num_customers} customers.")
     cont_or_quit(shop)
 
+# Initial screen with instructions
+def first_run():
+    clear_console()
+    print("-" * 19)
+    print("Shop Simulator 2000")
+    print(shopkeeper)
+    print("Hi I'm the shopkeeper.\nWelcome to my shop.\n")
+    print('A tall terminal window will\nenhance your experience.\n')
+    choice = input("Press Enter to continue")
+    main_menu()
+
 # Generate menu
-
-
 def displayMenu():
     clear_console()
     line = "-" * 19
@@ -525,12 +577,11 @@ def displayMenu():
                  "Preset Mode",
                  "Live Mode",
                  "Generate Customers",
-                 "Regenerate Shop"]
+                 "Reset Shop"]
 
-    print(line)
-    print("Shop Simulator 2000")
+    clear_console()
     print(shopkeeper)
-    print("Hi I'm the shopkeeper.\nHow can I help?")
+    print("How can I help?\n")
     print(line)
     print("MENU")
     print("----")
@@ -539,12 +590,16 @@ def displayMenu():
         print(index + 1, "-", item)
 
     print("x - Exit Application")
-
-
+    print(line)
+    
+# Display main menu
 def main_menu(shop=None):
 
     if shop is None:
         shop = generate_shop()
+
+    # Flag for live mode - if True the shopkeeper will recognise you
+    seen = False
 
     while True:
 
@@ -556,7 +611,7 @@ def main_menu(shop=None):
         elif selection == "2":
             preset_mode(shop)
         elif selection == "3":
-            live_mode(shop)
+            seen = live_mode(shop, seen)
         elif selection == "4":
             generate_customers(5, shop, BUDGET_RANGE, NAMES_PATH,
                                ITEMS_RANGE, PIECES_RANGE, CUSTOMERS_PATH)
@@ -573,4 +628,4 @@ def main_menu(shop=None):
 
 
 if __name__ == "__main__":
-    main_menu()
+    first_run()
