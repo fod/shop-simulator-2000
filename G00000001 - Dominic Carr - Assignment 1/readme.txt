@@ -1,0 +1,1 @@
+Bounces between around 3000 and 4000 in auto mode

@@ -26,6 +26,7 @@ char CUSTOMERS_PATH[] = "../customer.csv"; // Saved andomly generated customers 
 
 /* Display variables */
 char LINE[] = "------------------------------------\n";
+char LINE_LONG[] = "-------------------------------------------\n";
 
 // The shopkeeper's face
 char shopkeeper[] = "       _www_ \n"
@@ -36,29 +37,25 @@ char shopkeeper[] = "       _www_ \n"
 
 /* Structs representing the shop,
 products, stock and customers */
-struct Product
-{
+struct Product {
 	char *name;
 	double price;
 	int max_quantity; // The shop's stock of this item cannot exceed max_quantity
 };
 
-struct ProductStock
-{
+struct ProductStock {
 	struct Product product;
 	int quantity; // The amount of this product in stock
 };
 
-struct Shop
-{
+struct Shop {
 	double cash;
 	struct ProductStock stock[NUM_PRODUCTS];
 	size_t index; // Maximum index of stock[]
 };
 
 // The customer can have up to ITEMS_HIGH on shopping list
-struct Customer
-{
+struct Customer {
 	char *name;
 	char *face;
 	double budget;
@@ -75,8 +72,7 @@ void main_menu(struct Shop *shop);
 // Clear the console by printing 100 newlines
 void clear_console()
 {
-	for (int i = 0; i < 100; i++)
-	{
+	for (int i = 0; i < 100; i++) {
 		printf("\n");
 	}
 }
@@ -86,16 +82,12 @@ void cont_or_quit(struct Shop *shop)
 {
 	printf("%s\n", "Press Enter to continue or \n'Q' to return to main menu: ");
 	char enter = 0;
-	while (enter != '\r' && enter != '\n' && tolower(enter) != 'q')
-	{
+	while (enter != '\r' && enter != '\n' && tolower(enter) != 'q'){
 		enter = getchar();
 	}
-
-	if (tolower(enter) == 'q')
-	{
+	if (tolower(enter) == 'q'){
 		main_menu(shop);
 	}
-
 }
 
 // Get single character input from user
@@ -109,10 +101,8 @@ char input()
 // Detect character arrays containing only whitespace
 int all_space(const char *str)
 {
-	while (*str)
-	{
-		if (!isspace(*str++))
-		{
+	while (*str) {
+		if (!isspace(*str++)) {
 			return 0;
 		}
 	}
@@ -123,7 +113,6 @@ int all_space(const char *str)
 // Initialise a shop struct
 struct Shop generate_shop()
 {
-
 	FILE *fp;		   // filehandle
 	char *line = NULL; // line buffer
 	size_t len = 0;	   // line length
@@ -131,8 +120,7 @@ struct Shop generate_shop()
 
 	// Open stock csv file
 	fp = fopen(STOCK_PATH, "r");
-	if (fp == NULL)
-	{
+	if (fp == NULL){
 		printf("Error opening file\n");
 		exit(EXIT_FAILURE);
 	}
@@ -148,8 +136,7 @@ struct Shop generate_shop()
 	// idx of the last item in the stock array
 	shop.index = 0;
 	// Read stock.csv line by line
-	while ((read = getline(&line, &len, fp)) != -1)
-	{
+	while ((read = getline(&line, &len, fp)) != -1){
 		// Split line into name, price, max_quantity
 		char *n = strtok(line, ",");
 		char *p = strtok(NULL, ",");
@@ -162,7 +149,7 @@ struct Shop generate_shop()
 		strcpy(name, n);
 		// Initialise Product struct for new product
 		struct Product product = {name, price, quantity};
-		// Initialise ProductStock struct for quanitity of that product
+		// Initialise ProductStock struct for quantity of that product
 		struct ProductStock stockItem = {product, quantity};
 		// Add product to stock list and increment shop index
 		shop.stock[shop.index++] = stockItem;
@@ -226,47 +213,49 @@ char *get_face()
 	char *faces[19];
 	int i = 0; // index in faces array to add next face
 
-	// append flag - if 1 then add to last face, if 0 the
-	// face is complete and can be added to faces array
+	// append flag - if 1 then keep adding to current face
 	int append = 0;
-	while ((read = getline(&line, &len, fp)) != -1)
-	{
-		// Start building face
-		char *face = malloc(sizeof *face * 50);
-		strcpy(face, line);
-
+	while ((read = getline(&line, &len, fp)) != -1) {
+	
 		/* If current line is not blank and append flag is false then
 		   this is the first line of a new face. Set append flag to
-		   true, add current face to faces array and restart loop*/
-		if (all_space(face) == 0 && append == 0)
-		{
+		   true, and start filling a new faces array slot*/
+		if (all_space(line) == 0 && append == 0) {
+			faces[i] = malloc(sizeof(char) * 400);
+			faces[i] = strcpy(faces[i], line);
 			append = 1;
-			faces[i] = face;
 		}
 		/* If current line is blank and append flag is true then the
-		   current face is complete. Increment the faces array index.
-		   The face will be added on the next loop iteration.*/
-		else if (all_space(face) == 1 && append == 1)
-		{
+		   current face is complete. Increment the faces array index
+		   and toggle turn off the append flag*/
+		else if (all_space(line) == 1 && append == 1) {
 			append = 0;
 			i++;
 		}
 		/* If current line is not blank and append flag is true then add
 		   current line to current face. */
-		else if (append == 1)
-		{
-			strcat(faces[i], face);
+		else if (append == 1) {
+			strcat(faces[i], line);
 		}
-		/* Otherwise just read the next line */
 	}
 
 	// close file handle
 	fclose(fp);
 
-	// Return a random face from faces array
-	return faces[rand() % 19];
+	// Get a random face from faces array
+	char *randface = malloc(sizeof *randface * 400);
+	strcpy(randface, faces[rand() % 19]);
+
+	// Free the faces array
+	for (int i = 0; i < 19; i++) {
+		free(faces[i]);
+	}
+
+	// Return a random face
+	return randface;
 }
 
+// Generate a customer struct
 struct Customer generate_customer(struct Shop shop,
 								  int b_low, int b_high,
 								  int i_low, int i_high,
@@ -295,48 +284,36 @@ struct Customer generate_customer(struct Shop shop,
 
 char *stringify_product(struct Product product)
 {
-	char *string = malloc(sizeof *string * 40);
-	int _ = sprintf(string, "%-14s%7.2f", product.name, product.price);
-
+	char *string = malloc(sizeof *string * sizeof(LINE_LONG) + 1);
+	snprintf(string, sizeof(LINE_LONG), "%-12s%7.2f", product.name, product.price);
 	return string;
 }
 
 char *stringify_list(struct ProductStock *itemlist, int max_idx)
 {
-	char *string = malloc(sizeof *string * 20 * (max_idx + 5));
-
-	strcpy(string, LINE);
-	strcat(string, "    Item            Price   Quantity\n");
-	strcat(string, LINE);
-
-	for (int i = 0; i < max_idx; i++)
-	{
-		char *row = malloc(sizeof *row * 40);
-		sprintf(row, "%2d. %s%11d", i + 1, stringify_product(itemlist[i].product), itemlist[i].quantity);
-		strcat(string, row);
-		strcat(string, "\n");
+	char *string = malloc(sizeof *string * sizeof(LINE_LONG) * max_idx + max_idx);
+	int offset = snprintf(string, sizeof(LINE_LONG) * 3, "%s%s\n%s", 
+		LINE_LONG, "    Item           Price   Quantity   Total", LINE_LONG);
+	for (int i = 0; i < max_idx; i++) {
+		offset += snprintf(string + offset, (sizeof(LINE_LONG) *3 * i) - offset, "%2d. %s%7d\n", i + 1, 
+					stringify_product(itemlist[i].product), itemlist[i].quantity);
 	}
-	strcat(string, LINE);
 
+	offset += snprintf(string + offset, sizeof(LINE_LONG) - offset, "%s", LINE_LONG);
 	return string;
 }
 
 char *stringify_shop(struct Shop shop)
 {
-	char *string = stringify_list(shop.stock, shop.index);
-	char *cash = malloc(sizeof *cash * 40);
-	sprintf(cash, "Cash: %30.2f\n", shop.cash);
-	strcat(string, cash);
-	strcat(string, LINE);
-
+	char *string = malloc(sizeof *string * 20 * (shop.index + 5));
+	snprintf(string, sizeof(string), "%s\nCash: %30.2f\n%s", stringify_list(shop.stock, shop.index), shop.cash, LINE);
 	return string;
 }
 
 double total_bill(struct Customer customer)
 {
 	double total = 0;
-	for (int i = 0; i <= customer.sl_index - 1; i++)
-	{
+	for (int i = 0; i <= customer.sl_index - 1; i++) {
 		total += (customer.shoppingList[i].product.price * customer.shoppingList[i].quantity);
 	}
 	return total;
@@ -344,27 +321,17 @@ double total_bill(struct Customer customer)
 
 char *stringify_bill(struct Customer customer)
 {
-	char *string = stringify_list(customer.shoppingList, customer.sl_index);
-	double total = total_bill(customer);
-	char *cash = malloc(sizeof *cash * 40);
-	sprintf(cash, "Total Cost: %24.2f\n", total);
-	strcat(string, cash);
-	strcat(string, LINE);
-
+	char *string = malloc(sizeof *string * 20 * (customer.sl_index + 5));
+	snprintf(string, sizeof(string), "%s\nTotal Cost: %24.2f\n%s\n%s", 
+		stringify_list(customer.shoppingList, customer.sl_index), total_bill(customer), LINE);
 	return string;
 }
 
 char *stringify_customer(struct Customer customer)
 {
-	char *string = customer.face;
-	char *name = malloc(sizeof *name * 30);
-	sprintf(name, "\nName: %s", customer.name);
-	strcat(string, name);
-	char *budget = malloc(sizeof *budget * 10);
-	sprintf(budget, "\nBudget: %7.2f\n", customer.budget);
-	strcat(string, budget);
-	strcat(string, stringify_bill(customer));
-
+	char *string = malloc(sizeof (char) * 1000);
+	snprintf(string, sizeof(string), "%s\nName: %s\nBudget: %7.2f\n%s",
+				customer.face, customer.name, customer.budget, stringify_bill(customer));
 	return string;
 }
 
@@ -481,57 +448,49 @@ char **check_stock(struct Shop *shop, int reorder_threshold, int *num_out_of_sto
 
 void shop_visit(struct Shop *shop, struct Customer customer)
 {
-	while (1)
-	{
-		clear_console();
+	clear_console();
+	printf("%s has come into the shop with a shopping list!\n", customer.name);
+	printf("%s", stringify_customer(customer));
+	char c = getchar(); // Consume extra \n from stdin
+	cont_or_quit(shop);
+	clear_console();
+	printf("%s\n", customer.face);
+	printf("%s is shopping.\n", customer.name);
+	transact(shop, customer);
+	cont_or_quit(shop);
 
-		printf("%s has come into the shop with a shopping list!\n", customer.name);
-		printf("%s", stringify_customer(customer));
-		char c = getchar();
-		cont_or_quit(shop);
-		clear_console();
-		printf("%s\n", customer.face);
-		printf("%s is shopping.\n", customer.name);
-		transact(shop, customer);
-		cont_or_quit(shop);
+	// Check if any items are out of stock
+	clear_console();
+	printf("%s\n", shopkeeper);
+	printf("Better take a look in the stockroom.\n\n");
 
-		// Check if any items are out of stock
-		clear_console();
-		printf("%s\n", shopkeeper);
-		printf("Better take a look in the stockroom.\n\n");
-
-		int num_out_of_stock = 0;
-		char **out_of_stock = check_stock(shop, REORDER_THRESHOLD, &num_out_of_stock);
-		cont_or_quit(shop);
-		clear_console();
-		printf("%s\n", shopkeeper);
-		if (out_of_stock)
-		{
-			printf("The following items are out of stock:\n");
-			for (int i = 0; i < num_out_of_stock; i++)
-			{
-				printf("%s\n", out_of_stock[i]);
-			}
-			printf("%s", stringify_shop(*shop));
-			cont_or_quit(shop);
-			clear_console();
-			printf("%s\n", shopkeeper);
-			for (int i = 0; i < num_out_of_stock; i++)
-			{
-				printf("Restocking %s...\n", out_of_stock[i]);
-				restock(shop, out_of_stock[i]);
-				free(out_of_stock[i]);
-			}
+	int num_out_of_stock = 0;
+	char **out_of_stock = check_stock(shop, REORDER_THRESHOLD, &num_out_of_stock);
+	cont_or_quit(shop);
+	clear_console();
+	printf("%s\n", shopkeeper);
+	if (out_of_stock) {
+		printf("The following items are out of stock:\n");
+		for (int i = 0; i < num_out_of_stock; i++) {
+			printf("%s\n", out_of_stock[i]);
 		}
-		else
-		{
-			printf("Everything seems to be ok.\n");
-		}
-
 		printf("%s", stringify_shop(*shop));
 		cont_or_quit(shop);
 		clear_console();
+		printf("%s\n", shopkeeper);
+		for (int i = 0; i < num_out_of_stock; i++) {
+			printf("Restocking %s...\n", out_of_stock[i]);
+			restock(shop, out_of_stock[i]);
+			free(out_of_stock[i]);
+		}
 	}
+	else {
+		printf("Everything seems to be ok.\n");
+	}
+
+	printf("%s", stringify_shop(*shop));
+	cont_or_quit(shop);
+	clear_console();
 }
 
 void auto_mode(struct Shop *shop)
@@ -542,6 +501,7 @@ void auto_mode(struct Shop *shop)
 									ITEMS_LOW, ITEMS_HIGH,
 									PIECES_LOW, PIECES_HIGH);
 		shop_visit(shop, customer);
+		printf("%s", "HELLO");
 	}
 }
 
@@ -575,8 +535,6 @@ void display_menu()
 
 void main_menu(struct Shop *shop)
 {
-	// Set random seed
-	srand(time(NULL));
 
 	while (1) {
 		display_menu();
@@ -611,6 +569,9 @@ void main_menu(struct Shop *shop)
 
 int main(void)
 {
+	// Set random seed
+	srand(time(NULL));
+	// The shop
 	struct Shop shop = generate_shop();
 
 	clear_console();

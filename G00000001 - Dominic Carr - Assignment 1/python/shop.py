@@ -372,9 +372,12 @@ def shop_visit(shop, customer):
     cont_or_quit(shop)
     # Check if any items are out of stock
     clear_console()
+    print(shopkeeper)
+    print("Better take a look in the stockroom.\n")
+    cont_or_quit(shop)
+    clear_console()
     print(stringify_shop(shop))
     print(shopkeeper)
-    print("Better take a look in the stockroom.")
     # Check stock and reorder if necessary
     out_of_stock = check_stock(shop, REORDER_THRESHOLD)
     # This is just a charade, check_stock has already done any necessary restocking
@@ -566,7 +569,7 @@ def first_run():
     print(shopkeeper)
     print("Hi I'm the shopkeeper.\nWelcome to my shop.\n")
     print('A tall terminal window will\nenhance your experience.\n')
-    choice = input("Press Enter to continue")
+    input("Press Enter to continue")
     main_menu()
 
 # Generate menu
