@@ -4,6 +4,7 @@
 #include <time.h>
 #include <ctype.h>	// for isspace() and tolower()
 #include <unistd.h> // for sleep()
+#include <stdbool.h>
 
 /* Global constants
    ---------------- */
@@ -155,6 +156,7 @@ struct Shop generate_shop()
 		shop.stock[shop.index++] = stockItem;
 	}
 
+	fclose(fp);
 	return shop;
 }
 
@@ -284,29 +286,47 @@ struct Customer generate_customer(struct Shop shop,
 
 char *stringify_product(struct Product product)
 {
-	char *string = malloc(sizeof *string * sizeof(LINE_LONG) + 1);
-	snprintf(string, sizeof(LINE_LONG), "%-12s%7.2f", product.name, product.price);
+	char *string = malloc(sizeof(string) * strlen(LINE_LONG) + 1);
+	snprintf(string, strlen(LINE_LONG), "%-12s%8.2f", product.name, product.price);
 	return string;
 }
 
-char *stringify_list(struct ProductStock *itemlist, int max_idx)
+char *stringify_list(struct ProductStock *itemlist, int max_idx, bool total)
 {
-	char *string = malloc(sizeof *string * sizeof(LINE_LONG) * max_idx + max_idx);
-	int offset = snprintf(string, sizeof(LINE_LONG) * 3, "%s%s\n%s", 
-		LINE_LONG, "    Item           Price   Quantity   Total", LINE_LONG);
+	char *line = LINE;
+	char *header = "    Item           Price   Quantity";
+	int cols = 3;
+
+	if (total==true) {
+		line = LINE_LONG;
+		header = "    Item           Price   Quantity   Total";
+		cols = 4;
+	}
+	
+	char *string = malloc(sizeof(string) * strlen(line) * (cols * max_idx) + max_idx);
+	int offset = snprintf(string, strlen(line) * cols, "%s%s\n%s", line, header, line);
+	
 	for (int i = 0; i < max_idx; i++) {
-		offset += snprintf(string + offset, (sizeof(LINE_LONG) *3 * i) - offset, "%2d. %s%7d\n", i + 1, 
-					stringify_product(itemlist[i].product), itemlist[i].quantity);
+		if (total==true) {
+			offset += snprintf(string + offset, (strlen(line) * (cols + i)) - offset, "%2d. %s%11d%8.2f\n", i + 1, 
+						stringify_product(itemlist[i].product), itemlist[i].quantity, itemlist[i].product.price * itemlist[i].quantity);
+		}
+		else{
+			offset += snprintf(string + offset, (strlen(line) * (cols + i)) - offset, "%2d. %s%11d\n", i + 1, 
+						stringify_product(itemlist[i].product), itemlist[i].quantity);
+		}
 	}
 
-	offset += snprintf(string + offset, sizeof(LINE_LONG) - offset, "%s", LINE_LONG);
+	offset += snprintf(string + offset, strlen(line) - offset, "%s", line);
 	return string;
 }
 
 char *stringify_shop(struct Shop shop)
 {
-	char *string = malloc(sizeof *string * 20 * (shop.index + 5));
-	snprintf(string, sizeof(string), "%s\nCash: %30.2f\n%s", stringify_list(shop.stock, shop.index), shop.cash, LINE);
+	char *string = malloc(sizeof(string) * strlen(LINE) * (shop.index + 5));
+	snprintf(string, sizeof(string) * strlen(LINE) * (shop.index + 5), 
+		"%s\nShop's Cash: %30.2f\n%s", 
+		stringify_list(shop.stock, shop.index, false), shop.cash, LINE);
 	return string;
 }
 
@@ -321,17 +341,17 @@ double total_bill(struct Customer customer)
 
 char *stringify_bill(struct Customer customer)
 {
-	char *string = malloc(sizeof *string * 20 * (customer.sl_index + 5));
-	snprintf(string, sizeof(string), "%s\nTotal Cost: %24.2f\n%s\n%s", 
-		stringify_list(customer.shoppingList, customer.sl_index), total_bill(customer), LINE);
+	char *string = malloc(sizeof(string) * strlen(LINE_LONG) * (customer.sl_index + 5));
+	snprintf(string, sizeof(string) * strlen(LINE_LONG) * (customer.sl_index + 5), "%s\n%sTotal Cost: %31.2f\n%s", 
+		stringify_list(customer.shoppingList, customer.sl_index, true), LINE_LONG, total_bill(customer), LINE_LONG);
 	return string;
 }
 
 char *stringify_customer(struct Customer customer)
 {
-	char *string = malloc(sizeof (char) * 1000);
-	snprintf(string, sizeof(string), "%s\nName: %s\nBudget: %7.2f\n%s",
-				customer.face, customer.name, customer.budget, stringify_bill(customer));
+	char *string = malloc(sizeof(string) * 400 + (strlen(LINE_LONG) * customer.sl_index) + (strlen(LINE_LONG) * 5));
+	snprintf(string, sizeof(string) * 400 + (strlen(LINE_LONG) * customer.sl_index) + (strlen(LINE_LONG) * 5), 
+		"%s\nName: %s\nBudget:%7.2f\n%s", customer.face, customer.name, customer.budget, stringify_bill(customer));
 	return string;
 }
 
@@ -573,13 +593,16 @@ int main(void)
 	srand(time(NULL));
 	// The shop
 	struct Shop shop = generate_shop();
+	
+	printf("%s", stringify_list(shop.stock, shop.index, false));
 
-	clear_console();
-    printf("%s\n", "-------------------");
-    printf("%s\n\n", "Shop Simulator 2000");
-    printf("%s\n\n", shopkeeper);
-    printf("%s\n\n", "Hi I'm the shopkeeper.\nWelcome to my shop.");
-    printf("%s\n\n", "A tall terminal window will\nenhance your experience.");
-    cont_or_quit(&shop);
-    main_menu(&shop);
+
+	// clear_console();
+    // printf("%s\n", "-------------------");
+    // printf("%s\n\n", "Shop Simulator 2000");
+    // printf("%s\n\n", shopkeeper);
+    // printf("%s\n\n", "Hi I'm the shopkeeper.\nWelcome to my shop.");
+    // printf("%s\n\n", "A tall terminal window will\nenhance your experience.");
+    // cont_or_quit(&shop);
+    // main_menu(&shop);
 }
