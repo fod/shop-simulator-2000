@@ -4,7 +4,8 @@
 #include <time.h>
 #include <ctype.h>	// for isspace() and tolower()
 #include <unistd.h> // for sleep()
-#include <stdbool.h>
+#include <stdbool.h> // for bool type
+#include <math.h> // for fabs()
 
 /* Global constants
    ---------------- */
@@ -23,7 +24,7 @@
 char STOCK_PATH[] = "../stock.csv";		   // Stock, quantities, prices, plus initial shop cash
 char NAMES_PATH[] = "../names.list";	   // List of 200 names for customers
 char FACES_PATH[] = "../faces";			   // 19 ASCII art faces for customers
-char CUSTOMERS_PATH[] = "../customer.csv"; // Saved andomly generated customers go here
+char CUSTOMERS_PATH[] = "../customers.csv"; // Saved andomly generated customers go here
 
 /* Display variables */
 char LINE[] = "---------------------------------------\n";
@@ -291,8 +292,7 @@ struct Customer generate_customer(struct Shop shop,
 	int num_items = (rand() % (i_high + 1 - i_low) + i_low);
 
 	customer.sl_index = num_items;
-	for (int i = 0; i < num_items; i++)
-	{
+	for (int i = 0; i < num_items; i++){
 		int index = rand() % shop.index;
 		int num_pieces = (rand() % (p_high + 1 - p_low) + p_low);
 		customer.shoppingList[i] = shop.stock[index];
@@ -301,6 +301,100 @@ struct Customer generate_customer(struct Shop shop,
 	customer.r_index = 0;
 
 	return customer;
+}
+
+struct Customer *load_customers(struct Shop shop, char *path, int *num_customers) 
+{
+	FILE *fp;		   // filehandle
+	char *line = NULL; // line buffer
+	size_t len = 0;	   // line length
+	ssize_t read;	   // number of bytes read
+
+	// Open file for reading
+	fp = fopen(path, "r");
+	if (fp == NULL) {
+		printf("Error opening file\n");
+		exit(EXIT_FAILURE);
+	}
+
+	struct Customer *customers = malloc(sizeof(struct Customer));
+	int cust_idx = 0; // index in customers array to add next customer
+	bool id_flag = true;
+	while ((read = getline(&line, &len, fp)) != -1) {
+		// If current line is record seperator then add a new customer
+		if (strncmp(line, "----", 4) == 0) {
+			// Indicates the next line will be customers name and budget
+			id_flag = true;
+			cust_idx++;
+			continue;
+		}
+		// If a blank line then the end of the file has been reached
+		if (all_space(line) == 1) {
+			printf("%s\n", "End of file reached\n");
+			break;
+		}
+		// If current line is not record seperator and id_flag is true
+		if (id_flag) {
+			struct Customer customer; 
+			// Set customer's name, budget and face
+			char *n = strtok(line, ",");
+			char *b = strtok(NULL, ",");
+			double budget = atof(b);
+
+			char *name = malloc(sizeof(char) * 20);
+			name = strcpy(name, n);
+			char *face = get_face();
+
+			customer.name = name;
+			customer.budget = budget;
+			customer.face = face;
+
+			// initialise array indices
+			customer.sl_index = 0;
+			customer.r_index = 0;
+
+			// The next line will not be an id line
+			id_flag = false;
+			if (cust_idx > 0) {
+				customers = realloc(customers, sizeof(struct Customer) * (cust_idx + 1));
+			}
+			customers[cust_idx] = customer;
+		}
+		// If the current line is not an id or record separator line
+		// then it must be a shopping list line
+		else {
+			struct Customer *customer = &customers[cust_idx];
+
+			// extract item name and quantity
+			char *item = strtok(line, ",");
+			char *q = strtok(NULL, ",");
+			int quantity = atoi(q);
+			// find item in shop stock
+			bool found = false;
+
+			for (int i = 0; i < shop.index; i++) {
+				if (strcmp(shop.stock[i].product.name, item) == 0) {
+					customer->shoppingList[customer->sl_index] = shop.stock[i];
+					customer->shoppingList[customer->sl_index].quantity = quantity;
+					customer->sl_index++;
+					found = true;
+					break;
+				}
+			}
+			// if item not found in shop stock then print error message
+			if (!found) {
+				printf("Error: item %s not found in shop stock\n", item);
+			}
+		}
+	}
+
+	// close file handle
+	fclose(fp);
+	free(line);
+	customers = realloc(customers, sizeof(struct Customer) * (cust_idx));
+	// Return array of customers
+	*num_customers = cust_idx;
+	return customers;
 }
 
 char *stringify_product(struct Product product)
@@ -522,8 +616,9 @@ struct Product *check_stock(struct Shop *shop, int reorder_threshold, int *size)
 	return out_of_stock;
 }
 
-void shop_visit(struct Shop *shop, struct Customer customer)
+double shop_visit(struct Shop *shop, struct Customer customer)
 {
+	double cash = shop->cash;
 	clear_console();
 	printf("%s has come into the shop with a shopping list!\n", customer.name);
 	char *customer_string = stringify_customer(customer);
@@ -604,7 +699,8 @@ void shop_visit(struct Shop *shop, struct Customer customer)
 		main_menu(shop);
 	}
 	clear_console();
-	return;
+	double take = shop->cash - cash;
+	return take;
 }
 
 void auto_mode(struct Shop *shop)
@@ -615,6 +711,48 @@ void auto_mode(struct Shop *shop)
 									ITEMS_LOW, ITEMS_HIGH,
 									PIECES_LOW, PIECES_HIGH);
 		shop_visit(shop, customer);
+	}
+}
+
+void preset_mode(struct Shop *shop)
+{
+	double total_take = 0;
+	int *num_customers = malloc(sizeof(int));
+	struct Customer *customers = load_customers(*shop, CUSTOMERS_PATH, num_customers);
+
+	for (int i = 0; i < *num_customers; i++) {
+		total_take += shop_visit(shop, customers[i]);
+	}
+	clear_console();
+	printf("%s\n", shopkeeper);
+	printf("%s\n", "Whew, that was a long day!");
+    if (total_take == 0) {
+        printf("%s\n\n", "And I only broke even!!!");
+	}
+    else if (total_take > 0) {
+        printf("%s %s %.2f %s\n\n", "At least I made ", EURO, total_take, "profit.");
+	}
+	else {
+        printf("%s %s%.2f\n\n", "And after all that I lost", EURO, fabs(total_take));
+	}
+	
+	free(customers);
+	free(num_customers);
+	cont_or_quit();
+}
+
+bool live_mode(struct Shop *shop, bool seen)
+{
+	clear_console();
+	printf("%s\n", shopkeeper);
+	if (seen) {
+		printf("%s\n", "Oh hello. It's you again.");
+		printf("%s\n", "How much money have you got today?");
+	}
+	else {
+		printf("%s\n", "Hello, I'm the shopkeeper. Welcome to my shop.");
+		printf("%s\n", "I hope you don't mind me asking but how much money have you got?");
+		seen = true;
 	}
 }
 
@@ -656,10 +794,10 @@ void main_menu(struct Shop *shop)
 				auto_mode(shop);
 				break;
 			}
-			// case '2': {
-			// 	preset_mode();
-			// 	break;
-			// }
+			case '2': {
+				preset_mode(shop);
+				break;
+			}
 			// case '3': {
 			// 	live_mode();
 			// 	break;

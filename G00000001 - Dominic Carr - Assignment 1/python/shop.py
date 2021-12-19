@@ -442,11 +442,11 @@ def live_mode(shop, seen):
     print(shopkeeper)
     if seen:
         print("Oh hello. It's you again.")
-        print("Howm much money have you got today?")
+        print("How much money have you got today?")
     else:
         print("Hello, I'm the shopkeeper. Welcome to my shop.")
         print("I hope you don't mind me asking but how much money have you got?")
-        seen=True
+        seen = True
     budget = getFloat("\N{euro sign} ")
     print("Well it's not much but hopefully you'll be able to find something you can afford.")
     while(True):
