@@ -79,6 +79,13 @@ void clear_console()
 	}
 }
 
+// Remove excess newlines, etc from stdin
+// see https://stackoverflow.com/a/7898516
+void flush_stdin() {
+	int c;
+	while ((c = getchar()) != '\n' && c != EOF) { }
+}
+
 // Wait for user to press enter
 bool cont_or_quit()
 {
@@ -754,6 +761,26 @@ bool live_mode(struct Shop *shop, bool seen)
 		printf("%s\n", "I hope you don't mind me asking but how much money have you got?");
 		seen = true;
 	}
+	// Get numeric value from stdin
+	double budget;
+	
+	while (1) {
+		//budget = 
+
+
+		if (scanf("%lf", &budget)<= 0) {
+			flush_stdin();
+			printf("%s\n", "Please enter a postive number.");
+		}
+		else {
+			printf("%s %.2f %s\n", "That's a nice amount of money, I'm sure you'll like my wares.", budget, EURO);
+		}
+
+	}
+	printf("%.2f", budget);
+	flush_stdin();
+	cont_or_quit();
+
 }
 
 void display_menu()
@@ -786,6 +813,9 @@ void display_menu()
 
 void main_menu(struct Shop *shop)
 {
+	bool seen = malloc(sizeof(bool));
+	seen = false;
+
 	while (1) {
 		display_menu();
 		char choice = input();
@@ -798,10 +828,10 @@ void main_menu(struct Shop *shop)
 				preset_mode(shop);
 				break;
 			}
-			// case '3': {
-			// 	live_mode();
-			// 	break;
-			// }
+			case '3': {
+				live_mode(shop, seen);
+				break;
+			}
 			// case '4': {
 			// 	generate_customers();
 			// 	break;
