@@ -579,8 +579,7 @@ def displayMenu():
     menuItems = ["Auto Mode",
                  "Preset Mode",
                  "Live Mode",
-                 "Generate Customers",
-                 "Reset Shop"]
+                 "Generate Customers"]
 
     clear_console()
     print(shopkeeper)
@@ -618,13 +617,11 @@ def main_menu(shop=None):
         elif selection == "4":
             generate_customers(5, shop, BUDGET_RANGE, NAMES_PATH,
                                ITEMS_RANGE, PIECES_RANGE, CUSTOMERS_PATH)
-        elif selection == "5":
-            shop = generate_shop()
         elif selection == "x":
             print(shopkeeper)
             print("Thank you. Come again!")
             time.sleep(2)
-            break
+            quit()
         else:
             print("\nPlease enter a number between 1 and 6, or x to quit")
             continue

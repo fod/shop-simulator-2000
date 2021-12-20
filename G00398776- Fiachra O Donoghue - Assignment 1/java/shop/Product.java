@@ -3,12 +3,12 @@ package shop;
 public class Product {
     private String name;
     private double price;
-    private int quantity;
+    private int maxQuantity;
 
-    public Product(String name, double price, int quantity) {
+    public Product(String name, double price, int maxQuantity) {
         this.name = name;
         this.price = price;
-        this.quantity = quantity;
+        this.maxQuantity = maxQuantity;
     }
 
     public String getName() {
@@ -19,24 +19,21 @@ public class Product {
         return price;
     }
 
-    public int getQuantity() {
-        return quantity;
+    public int getMaxQuantity() {
+        return maxQuantity;
     }
 
     public void setPrice(double price) {
         this.price = price;
     }
 
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
+    public void setMaxQuantity(int maxQuantity) {
+        this.maxQuantity = maxQuantity;
     }
 
-    public double getTotal() {
-        return price * quantity;
-    }
-
+    @Override
     public String toString() {
-        return name + ": " + price + ": " + quantity;
+        return name + ": " + price + ": " + maxQuantity;
     }
 
 }
