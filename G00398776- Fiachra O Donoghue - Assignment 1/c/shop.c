@@ -271,7 +271,7 @@ char *get_face()
 		}
 		/* If current line is blank and append flag is true then the
 		   current face is complete. Increment the faces array index
-		   and toggle turn off the append flag*/
+		   and turn off the append flag*/
 		else if (all_space(line) == 1 && append == 1) {
 			append = 0;
 			i++;
@@ -452,7 +452,7 @@ char *stringify_list(struct ProductStock *itemlist, int max_idx, bool total)
 	for (int i = 0; i < max_idx; i++) {
 		// Get the stringified product representation
 		char* product_string = stringify_product(itemlist[i].product);
-		// print formatted row into buffer.
+		// print formatted row into buffer. snprintf returns num chars written
 		int offset = snprintf(buff, strlen(LINE) + 1, "\n%2d. %s%13d", i + 1, 
 						product_string, itemlist[i].quantity);
 		if (total==true) {
@@ -476,6 +476,7 @@ char *stringify_list(struct ProductStock *itemlist, int max_idx, bool total)
 	return string;
 }
 
+// Prints the shop's stock list
 char *stringify_shop(struct Shop shop)
 {
 	char *string = malloc(sizeof(string) * strlen(LINE) * (shop.index + 5));
@@ -488,6 +489,7 @@ char *stringify_shop(struct Shop shop)
 	return string;
 }
 
+// Calculate total bill from shop visit
 double total_bill(struct Customer customer)
 {
 	double total = 0;
@@ -497,9 +499,12 @@ double total_bill(struct Customer customer)
 	return total;
 }
 
+// Returns formatted shopping list with a total row
 char *stringify_bill(struct Customer customer)
-{
+{	// LINE_LONG = num of chars per row; 
+	// allocate memory for number of rows in customer shopping list plus 5 for lines, header and footer
 	char *string = malloc(sizeof(string) * strlen(LINE_LONG) * (customer.sl_index + 5));
+	// Stringify the customer's shopping list with row totals
 	char *list_string = stringify_list(customer.shoppingList, customer.sl_index, true);
 	snprintf(string, sizeof(string) * strlen(LINE_LONG) * (customer.sl_index + 5), "%sTotal Cost: %37.2f\n%s", 
 		list_string, total_bill(customer), LINE_LONG);
@@ -508,6 +513,7 @@ char *stringify_bill(struct Customer customer)
 	return string;
 }
 
+// Returns formatted string of customer details with shopping list and total
 char *stringify_customer(struct Customer customer)
 {
 	char *string = malloc(sizeof(string) * 400 + (strlen(LINE_LONG) * customer.sl_index) + (strlen(LINE_LONG) * 5));

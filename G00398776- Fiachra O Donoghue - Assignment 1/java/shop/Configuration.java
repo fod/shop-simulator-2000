@@ -22,6 +22,7 @@ public class Configuration {
     public static final String FACES_PATH = properties.getProperty("faces.path");
     public static final String SHOPKEEPER = properties.getProperty("face.shopkeeper");
     public static final String LINE_SHORT = properties.getProperty("line.short");
+    public static final String LINE_MED = properties.getProperty("line.med");
     public static final String LINE_LONG = properties.getProperty("line.long");
 
     /* Other global config variables can be adjusted */

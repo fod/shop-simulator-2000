@@ -33,7 +33,7 @@ public class Product {
 
     @Override
     public String toString() {
-        return name + ": " + price + ": " + maxQuantity;
+        return String.format("%-15s%7.2f", name, price);
     }
 
 }

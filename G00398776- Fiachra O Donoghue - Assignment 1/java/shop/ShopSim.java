@@ -7,15 +7,15 @@ public class ShopSim {
 
     private static boolean splash = true;
 
-    private static String shopkeeper = "       _www_ \n"
-                          + "      /-o-o-\\  \n"
-                          + "    (|   -   |) \n"
-                          + "      \\ -=- /  \n"
-                          + "      /`---'\\  \n";
+    public static String shopkeeper = "       _www_ " + System.lineSeparator()
+                          + "      /-o-o-\\  " + System.lineSeparator()
+                          + "    (|   -   |) " + System.lineSeparator()
+                          + "      \\ -=- /  " + System.lineSeparator()
+                          + "      /`---'\\  " + System.lineSeparator();
 
     private static void splash() {
 
-        clearConsole();
+        Utility.clearConsole();
         System.out.println(Configuration.LINE_SHORT);
         System.out.println();
         System.out.println("Shop Simulator 2000");
@@ -23,7 +23,7 @@ public class ShopSim {
         System.out.println("Hi I'm the shopkeeper.");
         System.out.println("Welcome to my shop.");
         System.out.println();
-        System.out.println("A tall terminal window will \nenhance your experience.");
+        System.out.println(String.format("A tall terminal window will %nenhance your experience."));
         System.out.println();
         System.out.println("Press Enter to continue.");
         try {
@@ -33,14 +33,7 @@ public class ShopSim {
         }
     }
 
-    private static void clearConsole() {
-        for (int i = 0; i < 100; i++) {
-            System.out.println();
-        }
-    }
-
     public static int menu() {
-
 
         // Show splash screen once only
         if (splash) {
@@ -59,7 +52,7 @@ public class ShopSim {
         int selection;
         Scanner input = new Scanner(System.in);
 
-        clearConsole();
+        Utility.clearConsole();
         System.out.println(shopkeeper);
         System.out.println();
         System.out.println("How can I help?");
@@ -72,39 +65,43 @@ public class ShopSim {
         }
         System.out.println("x - Exit application");
         selection = input.nextInt();
-        input.close();
+        //input.close();
         return selection;
     }
-    public static void main(String[] args) {
 
-        Shop shop = new Shop(Configuration.STOCK_PATH);
+    public static void menuControl() {
+        // Shop csv file location is outside the project
+        String stockPath = System.getProperty("user.dir") + Configuration.STOCK_PATH;
+        Shop shop = new Shop(stockPath);
         int selection = menu();
         switch (selection) {
             case 1:
-                //shop.doAutoMode();
-                System.out.println(shop);
+                    shop.doAutoMode();
                 break;
-            case 2:
-                shop.doPresetMode();
-                break;
-            case 3:
-                shop.doLiveMode();
-                break;
-            case 4:
-                shop.generateCustomers();
-                break;
-            case 5:
-                shop = new Shop(Configuration.STOCK_PATH);
-                break;
-            case 6:
-                shop.goodbye();
-                break;
+            // case 2:
+            //     shop.doPresetMode();
+            //     break;
+            // case 3:
+            //     shop.doLiveMode();
+            //     break;
+            // case 4:
+            //     shop.generateCustomers();
+            //     break;
+            // case 5:
+            //     shop = new Shop(Configuration.STOCK_PATH);
+            //     break;
+            // case 6:
+            //     shop.goodbye();
+            //     break;
             default:
                 System.out.println("Invalid selection.");
                 break;
 
         }
+    }
+    public static void main(String[] args) {
 
+        menuControl();
 
     }
 }

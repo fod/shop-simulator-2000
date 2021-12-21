@@ -26,13 +26,20 @@ public class ProductStock {
         return quantity;
     }
 
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
+    }
+
     public double getCost(){
         return product.getPrice() * quantity;
     }
 
     @Override
     public String toString() {
-        return "ProductStock [product=" + product + ", quantity=" + quantity + "]";
+        return String.format("%s%13d", this.product.toString(), this.quantity);
     }
     
+    public String toStringWithTotal() {
+        return String.format("%s%10.2f", this.toString(), this.getCost());
+    }
 }
