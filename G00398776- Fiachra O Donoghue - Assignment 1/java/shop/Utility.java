@@ -30,6 +30,4 @@ public class Utility {
         return false;
     }
 
-
-    
 }

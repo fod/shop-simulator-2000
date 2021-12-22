@@ -45,8 +45,7 @@ public class ShopSim {
             "Auto Mode",
             "Preset Mode",
             "Live Mode",
-            "Generate Customers",
-            "Reset Shop"
+            "Generate Customers"
         };
 
         int selection;
@@ -63,9 +62,8 @@ public class ShopSim {
         for (int i = 0; i < menuItems.length; i++) {
             System.out.println(i + 1 + " - " + menuItems[i]);
         }
-        System.out.println("x - Exit application");
+        System.out.println("9 - Exit application");
         selection = input.nextInt();
-        //input.close();
         return selection;
     }
 
@@ -74,30 +72,45 @@ public class ShopSim {
         String stockPath = System.getProperty("user.dir") + Configuration.STOCK_PATH;
         Shop shop = new Shop(stockPath);
         int selection = menu();
-        switch (selection) {
-            case 1:
+        while (selection != 9) {
+            switch (selection) {
+                case 1:
                     shop.doAutoMode();
-                break;
-            // case 2:
-            //     shop.doPresetMode();
-            //     break;
-            // case 3:
-            //     shop.doLiveMode();
-            //     break;
-            // case 4:
-            //     shop.generateCustomers();
-            //     break;
-            // case 5:
-            //     shop = new Shop(Configuration.STOCK_PATH);
-            //     break;
-            // case 6:
-            //     shop.goodbye();
-            //     break;
-            default:
-                System.out.println("Invalid selection.");
-                break;
-
+                    break;
+                case 2:
+                    shop.doPresetMode();
+                    break;
+                case 3:
+                    shop.doLiveMode(false);
+                    break;
+                case 4:
+                    shop.generateCustomers();
+                    break;
+                default:
+                    System.out.println("Invalid selection.");
+                    break;
+            }
+            selection = menu();
         }
+        // switch (selection) {
+        //     case 1:
+        //         shop.doAutoMode();
+        //         break;
+        //     case 2:
+        //         shop.doPresetMode();
+        //         break;
+        //     case 3:
+        //         shop.doLiveMode(false);
+        //         break;
+        //     // case 4:
+        //     //     shop.generateCustomers();
+        //     //     break;
+        //     case 9:
+        //         shop.goodbye();
+        //         break;
+        //     default:
+        //         break;
+        // }
     }
     public static void main(String[] args) {
 

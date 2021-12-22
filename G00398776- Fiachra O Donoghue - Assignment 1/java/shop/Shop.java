@@ -8,7 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
-
+import java.util.Scanner;
 
 public class Shop {
 
@@ -42,14 +42,61 @@ public class Shop {
 		}
     }
 
+    private List<Customer> loadCustomers(String fileName) {
+        String fullPath = System.getProperty("user.dir") + fileName;
+        List<Customer> customers = new ArrayList<>();
+        List<String> lines = Collections.emptyList();
+        try {
+            boolean id = true;
+            lines = Files.readAllLines(Paths.get(fullPath), StandardCharsets.UTF_8);
+            for (String line : lines) {
+                // End of a record
+                if (line.matches("-+")) {
+                    id = true;
+                    continue;
+                }
+                // End of the file
+                if (line.matches("\s*")) {
+                    break;
+                }
+                // Start of a record
+                if (id) {
+                    String[] idRec = line.split(",", 2);
+                    customers.add(new Customer(idRec[0], Double.parseDouble(idRec[1])));
+                    id = false;
+                }
+                // Shopping list line
+                else {
+                    String[] arr = line.split(",");
+                    String name = arr[0];
+                    int quantity = Integer.parseInt(arr[1].trim());
+                    // Find the product in the stock
+                    for (ProductStock ps : stock) {
+                        if (ps.getProduct().getName().equalsIgnoreCase(name)) {
+                             customers.get(customers.size() - 1).addToShoppingList(new ProductStock(ps.getProduct(), quantity));
+                        }
+                    }
+                }
+            }
+        }
+        catch (IOException e) {
+            System.out.println("Cannot locate Customers file");
+            e.printStackTrace();
+            System.exit(-1);
+        }
+        return customers;
+    }      
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(Configuration.LINE_MED + System.lineSeparator());
         sb.append("  Item             Price        Stock" + System.lineSeparator());
         sb.append(Configuration.LINE_MED + System.lineSeparator());
+        int count = 1;
         for (ProductStock ps : stock) {
-            sb.append("  " + ps.toString() + System.lineSeparator());
+            sb.append(count + " " + ps.toString() + System.lineSeparator());
+            count++;
         }
         sb.append(Configuration.LINE_MED + System.lineSeparator());
         sb.append(System.lineSeparator());
@@ -112,18 +159,241 @@ public class Shop {
     }
 
     public void doPresetMode() {
-        // TODO Auto-generated method stub
+        double totalTake = 0;
+        List<Customer> customers = loadCustomers(Configuration.CUSTOMERS_PATH);
+        for (Customer customer : customers) {
+            totalTake += this.shopVisit(customer);
+        }
+        Utility.clearConsole();
+        System.out.println(ShopSim.shopkeeper);
+        System.out.println("Whew, that was a long day!");
+        if (totalTake == 0) {
+            System.out.println("And I only broke even!!!");
+        }
+        else if (totalTake > 0) {
+            System.out.println(String.format("At least I made %s %.2f %s%n", "€", totalTake, "profit."));
+        }
+        else {
+            System.out.println(String.format("%s %s%.2f\n\n", "And after all that I lost", "€", Math.abs(totalTake)));
+        }
+        if (Utility.contOrQuit()) {
+            ShopSim.menuControl();
+        }
+        ShopSim.menuControl();
     }
 
-    public void doLiveMode() {
-        // TODO Auto-generated method stub
-    }
+    /* Live Mode */
+    public void doLiveMode(boolean seen) {
+
+        // Get price of cheapest item
+        double minPrice = 0;
+        for (ProductStock ps : stock) {
+            if (minPrice == 0 || ps.getProduct().getPrice() < minPrice) {
+                minPrice = ps.getProduct().getPrice();
+            }
+        }
+
+        // Get array of lower-case product names
+        List<String> names = new ArrayList<>();
+        for (ProductStock ps : stock) {
+            names.add(ps.getProduct().getName().toLowerCase());
+        }
+
+        // Clear console and show shopkeeper
+        Utility.clearConsole();
+        System.out.println(ShopSim.shopkeeper);
+
+        // Greet Customer and elicit budget
+        if (seen) {
+            System.out.println("Oh hello. It's you again.");
+		    System.out.println("How much money have you got today?");
+        }
+        else {
+            System.out.println("Hello, I'm the shopkeeper. Welcome to my shop.");
+            System.out.println("I hope you don't mind me asking but how much money have you got?");
+            System.out.print("€ ");
+		    seen = true;
+        }
+        double budget;
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            try {
+                budget = Double.parseDouble(scanner.nextLine());
+                if (budget < 0) {
+                    throw new NumberFormatException();
+                }
+                System.out.println("Well it's not much but hopefully you'll be able to find something you can afford.");
+                break;
+            }
+            catch (NumberFormatException e) {
+                System.out.println("Please enter a positive number.");
+            }
+        }
+
+        // The Live Mode loop
+        while (true) {
+            // Make sure the customer has enough money to buy something
+            if (budget < minPrice) {
+                if (budget == 0) {
+                    System.out.println("You don't have any money left.");
+                }
+                else {
+                    System.out.println(String.format("You've only got €%.2f left", budget));
+                    System.out.println(String.format("The cheapest item I have costs €$,2f", minPrice));
+                    System.out.println("Come back when you have more money.");
+                    System.out.println("Press Enter to continue.");
+                    Utility.waitForInput();
+                    ShopSim.menuControl();
+                }
+            }
+
+            // Customer is presented with a list of products
+            System.out.println("Would you like to see my stock (y/n)?");
+            scanner = new Scanner(System.in);
+
+            String input = scanner.nextLine();
+            if (input.equalsIgnoreCase("Y")) {
+                Utility.clearConsole();
+                System.out.println(this);
+                System.out.println(ShopSim.shopkeeper);
+                System.out.println("You can select a product to buy by number or name.");
+            }
+            else {
+                System.out.println("OK, Looks like you know what you want.");
+                System.out.println("So what'll it be?");
+            }
+
+            // Customer selects product
+            Product selectedProduct = null;
+            System.out.print("Enter product number or name (or 'Q' to end transaction): ");
+            scanner = new Scanner(System.in);
+
+            // If a number has been entered...
+            if (scanner.hasNextInt()){
+                int productNum = scanner.nextInt();
+                if (productNum < 0 || productNum >= this.getStock().size() + 1 ) {
+                    System.out.println("That's not a valid selection.");
+                    continue;
+                }
+                else {
+                    // The products are numbered from 1 but indexed from 0
+                    productNum--;
+                    selectedProduct = this.stock.get(productNum).getProduct();                    
+                }
+            }
+
+            // If a String has been entered...
+            else if (scanner.hasNextLine()) {
+                input = scanner.nextLine();
+                // If its a 'Q then quit'
+                if (input.equalsIgnoreCase("Q")) {
+                    Utility.clearConsole();
+                    System.out.println(ShopSim.shopkeeper);
+                    System.out.println("Thanks for shopping! Come back soon!");
+                    System.out.println("Press enter to continue");
+                    Utility.waitForInput();
+                    ShopSim.menuControl();
+                }
+
+                // If the string is a valid product name...
+                else if (names.contains(input.toLowerCase())) {
+                    int index = names.indexOf(input.toLowerCase());
+                    selectedProduct = this.stock.get(index).getProduct();
+                }
+                else {
+                    System.out.println("We're all out of that.");
+                    Random random = new Random(System.currentTimeMillis());
+                    int randomProduct = random.nextInt(this.getStock().size());
+                    System.out.println(String.format("How about some nice %s instead?", 
+                        this.getStock().get(randomProduct).getProduct().getName()));
+                    continue;
+                }
+            }
+            else {
+                System.out.println("That's not a valid selection.");
+                continue;
+            }
+            // Get desired quantity
+            System.out.println(String.format("%s costs €%.2f", selectedProduct.getName(), selectedProduct.getPrice()));
+            System.out.println("How many would you like?");
+            int quantity;
+            while (true) {
+                try {
+                    quantity = Integer.parseInt(scanner.nextLine());
+                    if (quantity < 0) {
+                        throw new NumberFormatException();
+                    }
+                    break;
+                }
+                catch (NumberFormatException e) {
+                    System.out.println("Please enter a positive number.");
+                }
+            }
+
+            // Get available quantity of requested product
+            int quantityAvailable = 0;
+            ProductStock selectedProductStock = null;
+            for (ProductStock ps : this.stock) {
+                if (ps.getProduct().equals(selectedProduct)) {
+                    quantityAvailable = ps.getQuantity();
+                    selectedProductStock = ps;
+                }
+            }
+
+            // if customer wants more than is in stock
+            if (quantity > quantityAvailable) {
+                System.out.println(String.format("Sorry, I don't have that many %ss.\n", selectedProduct.getName()));
+                // the customer's quantity is adjusted to match remaining stock
+                quantity = quantityAvailable;
+            }
+            // if the customer wants more than they can afford
+            if (quantity * selectedProduct.getPrice() > budget) {
+                // the customer's quantity is adjusted to match remaining budget
+                quantity = (int) (budget / selectedProduct.getPrice());
+                if (quantity == 0) {
+                    System.out.println(String.format("You can't afford any %s.", selectedProduct.getName()));
+                    continue;
+                }
+                else {
+                    System.out.println("You can't afford that many.");
+				    System.out.println(String.format("You can only get %d with €%.2f", quantity, budget));
+                }
+            }
+            // Make an offer and elicit confirmation
+            System.out.println(String.format("I can give you %d for €%.2f", quantity, quantity * selectedProduct.getPrice()));
+            System.out.println("Is that ok (y/n)?");
+
+            input = scanner.nextLine();
+            if (input.equalsIgnoreCase("Y")) {
+                // Customer pays
+                budget -= quantity * selectedProduct.getPrice();
+                // Stock is adjusted
+                selectedProductStock.setQuantity(quantityAvailable - quantity);
+                // Shop gets paid
+                this.cash += quantity * selectedProduct.getPrice();
+            }
+            else {
+                System.out.println("OK, Never mind.");
+            }
+            // Customer can leave or continue shopping
+            System.out.println(String.format("You have €%.2f left.", budget));
+            System.out.println("Would you like to buy something else (y/n)?");
+            input = scanner.nextLine();
+            if (input.equalsIgnoreCase("Y")) {
+                continue;
+            }
+            else {
+                Utility.clearConsole();
+                System.out.println(ShopSim.shopkeeper);
+                System.out.println("OK. Thanks for shopping! Come back soon!");
+                System.out.println("Press Enter to continue");
+                Utility.waitForInput();
+                ShopSim.menuControl();
+            }
+        }
+    } 
 
     public void generateCustomers() {
-        // TODO Auto-generated method stub
-    }
-
-    public void goodbye() {
         // TODO Auto-generated method stub
     }
 
@@ -192,7 +462,7 @@ public class Shop {
         transact(customer);
 
         if (Utility.contOrQuit()) {
-            ShopSim.menuControl();
+            return 0;
         }
 
         // Check stock levels
@@ -207,11 +477,9 @@ public class Shop {
         System.out.println(ShopSim.shopkeeper);
         if (outOfStock.size() > 0) {
             System.out.println("The following items are out of stock:");
-            System.out.println(String.format("%s%n", outOfStock.get(0).getName()));
-            for (int i = 1; i < outOfStock.size(); i++) {
-                System.out.println(String.format("%s, ", outOfStock.get(i).getName()));
+            for (int i = 0; i < outOfStock.size(); i++) {
+                System.out.println(String.format("%s%n", outOfStock.get(i).getName()));
             }
-            System.out.println(String.format("and %s.", outOfStock.get(outOfStock.size() - 1).getName()));
             System.out.println(this);
             if (Utility.contOrQuit()) {
                 ShopSim.menuControl();

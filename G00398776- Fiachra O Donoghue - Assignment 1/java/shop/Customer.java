@@ -26,6 +26,22 @@ public class Customer {
         this.receipt = new ArrayList<>();
     }
 
+    public Customer(String name, double budget, List<ProductStock> shoppingList) {
+        this.name = name;
+        this.face = randFace();
+        this.budget = budget;
+        this.shoppingList = shoppingList;
+        this.receipt = new ArrayList<>();
+    }
+
+    public Customer(String name, double budget) {
+        this.name = name;
+        this.face = randFace();
+        this.budget = budget;
+        this.shoppingList = new ArrayList<>();
+        this.receipt = new ArrayList<>();
+    }
+
     private String randName() {
         String namePath = System.getProperty("user.dir") + Configuration.NAMES_PATH;
         List<String> lines = Collections.emptyList();
@@ -98,6 +114,10 @@ public class Customer {
 
     public List<ProductStock> getShoppingList() {
         return this.shoppingList;
+    }
+
+    public void addToShoppingList(ProductStock productStock) {
+        this.shoppingList.add(productStock);
     }
 
     public List<ProductStock> getReceipt() {

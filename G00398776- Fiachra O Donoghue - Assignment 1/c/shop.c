@@ -773,14 +773,14 @@ bool live_mode(struct Shop *shop, bool seen)
 	}
 
 	// Get an array of lower case product names for easier comparison
-	char **prod_names[shop->index]; // = malloc(sizeof(char *) * shop->index);
+	char *prod_names[shop->index]; // = malloc(sizeof(char *) * shop->index);
 	for (int i = 0; i < shop->index; i++) {
 		char *name = malloc(sizeof(char) * strlen(shop->stock[i].product.name) + 1);
 		for (int j = 0; j < strlen(shop->stock[i].product.name); j++) {
 			name[j] = tolower(shop->stock[i].product.name[j]);
 		}
-		prod_names[i] = &name;
-		free(name);
+		prod_names[i] = name;
+		//free(name);
 	}
 
 	clear_console();
@@ -866,11 +866,12 @@ bool live_mode(struct Shop *shop, bool seen)
 			}
 			// if a string has been entered
 			else if (product_name[0] != '\n' && product_name != NULL) {
-				// Remove newline form input
+				// Remove newline from input
 				product_name[strcspn(product_name, "\n")] = 0;
 				bool found = false;
 				for (int i = 0; i < shop->index; i++) {
-					if (strcmp(product_name, *prod_names[i]) == 0) {	
+					if (strcmp(product_name, prod_names[i]) == 0) {	
+						product_num = i;
 						product = shop->stock[i].product;
 						found = true;
 					}
