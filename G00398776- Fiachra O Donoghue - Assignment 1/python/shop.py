@@ -2,13 +2,13 @@
 # A simple shopping simulation in procedural Python
 # Author: Fiachra O' Donoghue
 
-from dataclasses import dataclass, field
-from typing import List
-import csv
-import random
-import time
-from faces import faces
-import re
+from dataclasses import dataclass, field # A data structure similar to C structs
+from typing import List                  # For type hinting
+import csv                               # csv parsing
+import random                            # RNG
+import time                              # For time.sleep()
+from faces import faces                  # Faces for customers
+import re                                # Regular expressions
 
 # Constants
 # Paths to stock and names files
@@ -195,11 +195,13 @@ def load_customers(shop, path):
                 customer = Customer()
                 shopping_list = False
             else:
+                # if not in a shopping list or a sep line it must be customer details
                 if not shopping_list:
                     (customer.name, customer.budget) = line.split(',')
                     customer.budget = float(customer.budget)
                     shopping_list = True
                 else:
+                    # In the shopping list
                     (product_name, quantity) = line.split(',')
                     product = next(
                         item.product for item in shop.stock if item.product.name == product_name.strip())
@@ -216,12 +218,17 @@ def stringify_product(product):
 
 def stringify_shop(shop):
     """Return a string representation of a shop"""
+    # Top line
     stock = line = "-" * 36 + "\n"
+    # Header + line
     stock += ("    Item" + " " * 13 + "Price" + " " * 5 + "Stock\n" + line)
+    # Item list
     for i, item in enumerate(shop.stock):
         stock += (f"{i + 1:>2}. " + stringify_product(item.product) +
                   f"{item.quantity:>10}" + "\n")
+    # Footer line
     stock += line
+    # Cash + bottom line
     cash = f"Shop's Cash: {shop.cash:>7.2f}"
     return stock + "\n" + cash + "\n" + line
 
@@ -236,14 +243,19 @@ def total_bill(itemlist):
 
 def stringify_bill(itemlist):
     """Calculate subtotals and totals for list of items and quantities and return as string"""
+    # Top line
     out = line = "-" * 49 + "\n"
+    # Header + line
     out += ("    Item" + " " * 13 + "Price" + " " *
             5 + "Quantity" + " " * 5 + "Total\n" + line)
+    # Item list
     for i, item in enumerate(itemlist):
         out += (f"{i + 1:>2}. {stringify_product(item.product)}" +
                 f"{item.quantity:>13}" +
                 f"{item.product.price * item.quantity:>10.2f}\n")
+    # Footer line
     out += line
+    # Total + bottom line
     total = f"Total Cost: {total_bill(itemlist):37.2f}"
     return out + total + "\n" + line
 
@@ -292,10 +304,10 @@ def transact(shop, customer):
                 # The purchase is made
                 print(
                     f"{customer.name} buys {item.quantity} x {item.product.name} for {item.product.price * item.quantity:.2f}")
-                # Thed shop's stock and cash are updated
+                # The shop's stock and cash are updated
                 stock.quantity -= item.quantity
                 shop.cash += item.product.price * item.quantity
-                # The customers budget is update and the purchase is added to their receipt
+                # The customers budget is updated and the purchase is added to their receipt
                 customer.budget -= item.product.price * item.quantity
                 customer.receipt.append(item)
                 print(
@@ -320,10 +332,14 @@ def restock(shop, product):
         shop (dataclass): The shop
         product (dataclass): The product to restock
     """
+    # Find the product in the shop's stock
     for item in shop.stock:
         if item.product == product:
+            # Cache original quantity
             current_quantity = item.quantity
+            # Restock
             item.quantity = item.product.max_quantity
+            # Pay for the new stock
             shop.cash -= item.product.price * \
                 (item.product.max_quantity - current_quantity)
 
@@ -360,17 +376,24 @@ def shop_visit(shop, customer):
     Returns:
         float: The amount of money the customer spent
     """
+
+    # Cache original cash -- to calculate take later
     cash = shop.cash
+
+    # Show customers shopping list
     clear_console()
     print(f"{customer.name} has come into the shop with a shopping list!")
     print(stringify_customer(customer))
     cont_or_quit(shop)
+
+    # Transactions
     clear_console()
     print(f"{customer.face}")
     print(f"{customer.name} is shopping.\n")
     transact(shop, customer)
     cont_or_quit(shop)
-    # Check if any items are out of stock
+
+    # Stockkeeping
     clear_console()
     print(shopkeeper)
     print("Better take a look in the stockroom.\n")
@@ -561,7 +584,8 @@ def generate_customers(num_customers, shop, budget_range, names_path,
     print(f"Generated {num_customers} customers.")
     cont_or_quit(shop)
 
-# Initial screen with instructions
+# Initial splash screen with instructions
+# Only shown once
 def first_run():
     clear_console()
     print("-" * 19)
@@ -615,6 +639,7 @@ def main_menu(shop=None):
         elif selection == "3":
             seen = live_mode(shop, seen)
         elif selection == "4":
+            # TODO Make number of customers a config variable
             generate_customers(5, shop, BUDGET_RANGE, NAMES_PATH,
                                ITEMS_RANGE, PIECES_RANGE, CUSTOMERS_PATH)
         elif selection == "x":
