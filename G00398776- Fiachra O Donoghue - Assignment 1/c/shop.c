@@ -86,7 +86,7 @@ void flush_stdin() {
 	while ((c = getchar()) != '\n' && c != EOF) { }
 }
 
-// Wait for user to press enter
+// Wait for user to press enter or quit
 bool cont_or_quit()
 {
 	printf("%s\n", "Press Enter to continue or \n'Q' to return to main menu: ");
@@ -102,6 +102,7 @@ bool cont_or_quit()
 	}
 }
 
+// Just wait for user to press enter
 void wait_for_enter() {
 	char enter = 0;
 	while (enter != '\r' && enter != '\n'){
@@ -109,6 +110,7 @@ void wait_for_enter() {
 	}
 }
 
+// Wait for a y or n
 bool yes() {
 	char enter = 0;
 	while (tolower(enter) != 'y' && tolower(enter) != 'n'){
@@ -308,26 +310,36 @@ struct Customer generate_customer(struct Shop shop,
 
 {
 	struct Customer customer;
+	// Name and face are malloc'd in get_name() and get_face()
+	// So need to be freed when customer is finished transaction
 	char *name = get_name();
 	char *face = get_face();
 	customer.name = name;
 	customer.face = face;
 
+	// Generate random budget and number of items
 	customer.budget = (double)(rand() % (b_high - b_low + 1) + b_low);
 	int num_items = (rand() % (i_high + 1 - i_low) + i_low);
 
+	// Keep track of shopping list size
 	customer.sl_index = num_items;
+	// For each item in shopping list
 	for (int i = 0; i < num_items; i++){
+		// Get a random item from the shop's stock
 		int index = rand() % shop.index;
+		// generate a random quantity of that item
 		int num_pieces = (rand() % (p_high + 1 - p_low) + p_low);
+		// add to customer
 		customer.shoppingList[i] = shop.stock[index];
 		customer.shoppingList[i].quantity = num_pieces;
 	}
+	// Customer receipt count
 	customer.r_index = 0;
 
 	return customer;
 }
 
+// Load customers from file
 struct Customer *load_customers(struct Shop shop, char *path, int *num_customers) 
 {
 	FILE *fp;		   // filehandle
@@ -397,6 +409,7 @@ struct Customer *load_customers(struct Shop shop, char *path, int *num_customers
 			// find item in shop stock
 			bool found = false;
 
+			// Locate item in shop stock
 			for (int i = 0; i < shop.index; i++) {
 				if (strcmp(shop.stock[i].product.name, item) == 0) {
 					customer->shoppingList[customer->sl_index] = shop.stock[i];
@@ -422,6 +435,7 @@ struct Customer *load_customers(struct Shop shop, char *path, int *num_customers
 	return customers;
 }
 
+// Create string for single product -- used to build receipts, etc
 char *stringify_product(struct Product product)
 {
 	char *string = malloc(sizeof(string) * strlen(LINE_LONG) + 1);
@@ -479,6 +493,8 @@ char *stringify_list(struct ProductStock *itemlist, int max_idx, bool total)
 // Prints the shop's stock list
 char *stringify_shop(struct Shop shop)
 {
+	// Each line is strlen(LINE) chars long. We need 1 line for each stock item
+	// Plus five lines for the header and footer
 	char *string = malloc(sizeof(string) * strlen(LINE) * (shop.index + 5));
 	char *list_string = stringify_list(shop.stock, shop.index, false);
 	snprintf(string, sizeof(string) * strlen(LINE) * (shop.index + 5), 
@@ -615,9 +631,11 @@ void transact(struct Shop *shop, struct Customer customer)
 void restock(struct Shop *shop, char *product)
 {
 	for (int i = 0; i < shop->index; i++) {
+		// Find the product in the shop stock
 		if (strcmp(shop->stock[i].product.name, product) == 0) {
 			int current_quantity = shop->stock[i].quantity;
 
+			// Restock and pay
 			shop->stock[i].quantity = shop->stock[i].product.max_quantity;
 			shop->cash -= shop->stock[i].product.price * (shop->stock[i].product.max_quantity - current_quantity);
 		}
@@ -627,14 +645,19 @@ void restock(struct Shop *shop, char *product)
 // Test to see if any item stocks are below reorder threshold and return array of those items
 struct Product *check_stock(struct Shop *shop, int reorder_threshold, int *size)
 {
+	// Count number of items below reorder threshold
 	int count = 0;
 	for (int i = 0; i < shop->index; i++) {
 		if (shop->stock[i].quantity < reorder_threshold){
 			count++;
 		}
 	}
+
+	// Use count to allocate memory for the array of items
 	struct Product *out_of_stock = malloc(sizeof(struct Product) * count);
-	int index = 0;
+	
+	int index = 0; // Keep track of location in out of stock array
+	// Restock items below reorder threshold
 	for (int i = 0; i < shop->index; i++) {
 		if (shop->stock[i].quantity < reorder_threshold){
 			out_of_stock[index] = shop->stock[i].product;
@@ -645,9 +668,13 @@ struct Product *check_stock(struct Shop *shop, int reorder_threshold, int *size)
 	return out_of_stock;
 }
 
+// Simulate a visit by a customer to the shop
 double shop_visit(struct Shop *shop, struct Customer customer)
 {
+	// Cache the cash
 	double cash = shop->cash;
+
+	// Show the customer's shopping list
 	clear_console();
 	printf("%s has come into the shop with a shopping list!\n", customer.name);
 	char *customer_string = stringify_customer(customer);
@@ -656,15 +683,18 @@ double shop_visit(struct Shop *shop, struct Customer customer)
 
 	char c = getchar(); // Consume extra \n from stdin
 	if (cont_or_quit() == true) {
+		// free customer's name & face before they go out of scope
 		free(customer.name);
 		free(customer.face);
 		main_menu(shop);
 	}
 
+	// The transactions
 	clear_console();
 	printf("%s\n", customer.face);
 	printf("%s is shopping.\n", customer.name);
 	transact(shop, customer);
+	// Customer is no longer needed
 	free(customer.name);
 	free(customer.face);
 
@@ -676,7 +706,6 @@ double shop_visit(struct Shop *shop, struct Customer customer)
 	clear_console();
 	printf("%s\n", shopkeeper);
 	printf("Better take a look in the stockroom.\n\n");
-
 	int *num_out_of_stock = malloc(sizeof(int));
 	struct Product *out_of_stock = check_stock(shop, REORDER_THRESHOLD, num_out_of_stock);
 	if (cont_or_quit() == true) {
@@ -685,12 +714,15 @@ double shop_visit(struct Shop *shop, struct Customer customer)
 	clear_console();
 	printf("%s\n", shopkeeper);
 
+	// Restock items in out of stock array
 	if (*num_out_of_stock > 0) {
+		// Print out of stock items
 		printf("The following items are out of stock:\n");
 		for (int i = 0; i < *num_out_of_stock; i++) {
 			printf("%s\n", out_of_stock[i].name);
 		}
 	
+		// Print shop stocklist
 		char *shop_string = stringify_shop(*shop);
 		printf("%s", shop_string);
 		free(shop_string);
@@ -701,6 +733,7 @@ double shop_visit(struct Shop *shop, struct Customer customer)
 		clear_console();
 		printf("%s\n", shopkeeper);
 
+		// Restock
 		for (int i = 0; i < *num_out_of_stock; i++) {
 			printf("Restocking %s...\n", out_of_stock[i].name);
 			restock(shop, out_of_stock[i].name);
@@ -709,9 +742,11 @@ double shop_visit(struct Shop *shop, struct Customer customer)
 	else {
 		printf("Everything seems to be ok.\n");
 	}
+	// out of stock variables no longer needed
 	free(out_of_stock);
 	free(num_out_of_stock);
 
+	// Print shop stocklist
 	char *shop_string = stringify_shop(*shop);
 	printf("%s", shop_string);
 	free(shop_string);
@@ -720,10 +755,13 @@ double shop_visit(struct Shop *shop, struct Customer customer)
 		main_menu(shop);
 	}
 	clear_console();
+
+	// Calculate and return take
 	double take = shop->cash - cash;
 	return take;
 }
 
+// auto mode -- will run until user quits
 void auto_mode(struct Shop *shop)
 {
 	while(1) {
@@ -735,17 +773,24 @@ void auto_mode(struct Shop *shop)
 	}
 }
 
+// Preset mode -- loads customers from csv file in CUSTOMERS_PATH
 void preset_mode(struct Shop *shop)
 {
+	// Keep track of the total take for the run of customers
 	double total_take = 0;
+	// Need to pass empty pointer to load_customers, so size of array is available later 
 	int *num_customers = malloc(sizeof(int));
+	// Get an array of customer structs
 	struct Customer *customers = load_customers(*shop, CUSTOMERS_PATH, num_customers);
 
+	// send each cutomer on a shop visit
 	for (int i = 0; i < *num_customers; i++) {
+		// shop_visit returns the take from that visit
 		total_take += shop_visit(shop, customers[i]);
 	}
 	clear_console();
 	printf("%s\n", shopkeeper);
+	// Whew!!!
 	printf("%s\n", "Whew, that was a long day!");
     if (total_take == 0) {
         printf("%s\n\n", "And I only broke even!!!");
@@ -757,11 +802,13 @@ void preset_mode(struct Shop *shop)
         printf("%s %s%.2f\n\n", "And after all that I lost", EURO, fabs(total_take));
 	}
 	
+	// Don't need the customers anymore
 	free(customers);
 	free(num_customers);
 	cont_or_quit();
 }
 
+// Live mode -- will run until user runs out of money or quits
 bool live_mode(struct Shop *shop, bool seen)
 {	
 	// Get the price of the cheapest item
@@ -780,9 +827,9 @@ bool live_mode(struct Shop *shop, bool seen)
 			name[j] = tolower(shop->stock[i].product.name[j]);
 		}
 		prod_names[i] = name;
-		//free(name);
 	}
 
+	// Welcome customer -- if seen is true get a different message
 	clear_console();
 	printf("%s\n", shopkeeper);
 	if (seen) {
@@ -807,7 +854,11 @@ bool live_mode(struct Shop *shop, bool seen)
 			break;
 		}
 	}
+
+	// Start shopping
 	while(1) {
+
+		// Eject deadbeats
 		if (budget < min_price) {
 			if (budget == 0) {
 				printf("%s\n", "You don't have any money left.");
@@ -816,13 +867,14 @@ bool live_mode(struct Shop *shop, bool seen)
 				printf("%s %s%.2f %s\n%s %s%.2f.\n", 
 					"You've only got", EURO, budget, "left.",
 					"The cheapest item I have costs", EURO, min_price);
-				printf("%s\n", "Come back when you have more money.");
-				printf("%s", "Press Enter to continue.");
-				flush_stdin();
-				wait_for_enter();
-				break;
 			}
+			printf("%s\n", "Come back when you have more money.");
+			printf("%s", "Press Enter to continue.");
+			flush_stdin();
+			wait_for_enter();
+			break;
 		}
+
 		// Get item request from customer
 		printf("%s ", "Would you like to see my stock (y/n)?");
 		if (yes()) {
@@ -838,8 +890,9 @@ bool live_mode(struct Shop *shop, bool seen)
             printf("%s\n", "So what'll it be?");
 		}
 		printf("%s", "Enter product number or name (or 'Q' to end transaction): ");
-		char product_name[20];
-		char q;
+		// Customer can enter number or name
+		char product_name[20]; 
+		char q; // for sscanf 'Q' detector
 		int product_num;
 		struct Product product;
 		flush_stdin();
@@ -876,24 +929,21 @@ bool live_mode(struct Shop *shop, bool seen)
 						found = true;
 					}
 				}
+				// If the product doesn't exist
 				if (found == false) {
 					printf("%s\n", "We're all out of that.");
 					printf("How about some nice %s instead?\n", prod_names[rand() % shop->index]);
 					continue;
 				}
 			}
+			// This should never be reached
 			else {
 				printf("%s\n", "That's not a valid selection.");
 				continue;
 			}
 		}
 
-		// for (int i = 0; i < shop->index; i++) {
-		// 	free(prod_names[i]);
-		// }
-		// free(prod_names);
-
-		// Request quantity from customer
+		// Now that we know what the customer wants we can request quantity from customer
 		printf("%s costs %s%.2f\n", product.name, EURO, product.price);
 		printf("%s\n", "How many would you like?");
 		int quantity;
@@ -957,6 +1007,7 @@ bool live_mode(struct Shop *shop, bool seen)
 	return seen;
 }
 
+// Generate customers with random attributes and write to file
 void generate_customers(int num_customers, struct Shop shop,
 						double b_low, double b_high, 
 						int i_low, int i_high,
@@ -987,6 +1038,7 @@ void generate_customers(int num_customers, struct Shop shop,
 		free(customer.name);
 		free(customer.face);
 	}
+	// Close the resource
 	fclose(customers);
 	printf("%s\n", "Customers generated.");
 	printf("%s\n", "Press Enter to continue");
@@ -994,7 +1046,7 @@ void generate_customers(int num_customers, struct Shop shop,
 	wait_for_enter();
 }
 						
-
+// Main menu
 void display_menu()
 {
 	clear_console();
@@ -1025,7 +1077,7 @@ void display_menu()
 
 void main_menu(struct Shop *shop)
 {
-	bool seen; // = malloc(sizeof(bool));
+	bool seen;
 	seen = false;
 
 	while (1) {
@@ -1073,6 +1125,7 @@ int main(void)
 	// The shop
 	struct Shop shop = generate_shop();
 	
+	// Splash screen -- only appears once
 	clear_console();
     printf("%s\n", "-------------------");
     printf("%s\n\n", "Shop Simulator 2000");
