@@ -14,7 +14,7 @@ import re
 # Paths to stock and names files
 STOCK_PATH = '../stock.csv'
 NAMES_PATH = '../names.list'
-CUSTOMERS_PATH = '../customers.csv'
+CUSTOMERS_PATH = '../customers_average.csv'
 
 # Value ranges for random customer generation
 BUDGET_RANGE = (100, 400)

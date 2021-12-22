@@ -1,1 +1,65 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage[style=apa, backend=biber]{biblatex}
+\usepackage{color}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{wrapfig}
+\usepackage{microtype}
+\usepackage{flafter}
+
+
+
+\parindent=0pt % disables indentation
+\parskip=12pt  % adds vertical space between paragraphs
+% \makeatletter
+% %\def\BState{\State\hskip-\ALG@thistlm}
+% \makeatother
+\title{Comparison of shop simulation development using procedural Python, C, and Java}
+\author{Fiachra O' Donoghue}
+
+\date{%
+    G00398776\\%
+}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+\subsection{Sorting}
+
 1. tolower(), etc ---> one char -- have to iterate through char array
+
+\begin{algorithm}[H]
+    \caption{A function for comparing numerical values}\label{comparator}
+    \begin{algorithmic}[1]
+    \Procedure{Comparator}{a, b}
+    \If {$a < b$} \Return -1
+    \EndIf
+    \If {$a = b$} \Return 0
+    \EndIf
+    \If {$a > b$} \Return 1
+    \EndIf
+    \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Inversions}
+there
+
+
+\subsubsection{Efficiency}
+
+you
+
+
+\clearpage
+
+\end{document}
