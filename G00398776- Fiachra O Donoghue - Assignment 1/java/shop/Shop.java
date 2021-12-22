@@ -2,6 +2,7 @@ package shop;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Writer;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -396,20 +397,28 @@ public class Shop {
     } 
 
     public void generateCustomers(int numCustomers) {
+        System.out.println("Generating customers...");
         String customersPath = System.getProperty("user.dir") + Configuration.CUSTOMERS_PATH;
+        PrintWriter writer = null;
         try {
-            PrintWriter writer = new PrintWriter(customersPath, "UTF-8");
+            writer = new PrintWriter(customersPath, "UTF-8");
             for (int i = 0; i < numCustomers; i++) {
                 Customer customer = randomCustomer();
-                writer.println(String.format("%s, %.2f", customer.getName(), customer.getBudget()));
+                writer.println(String.format("%s,%.2f", customer.getName(), customer.getBudget()));
                 for (ProductStock ps : customer.getShoppingList()) {
-                    writer.println(String.format("%s, %d", ps.getProduct().getName(), ps.getQuantity()));
+                    writer.println(String.format("%s,%d", ps.getProduct().getName(), ps.getQuantity()));
                 }
                 writer.println("----------");
             }
         }
         catch (IOException e) {
             System.out.println("Error writing to file");
+        }
+        finally {
+            writer.close();
+            System.out.println("Customers generated.");
+            System.out.println("Press Enter to continue");
+            Utility.waitForInput();
         }
 
     }
