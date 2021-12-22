@@ -21,7 +21,21 @@
 
 4. Description of program execution from a user perspective
 
-------------------------------------------------------------
+    4.1 Auto Mode
+    4.2 Preset Mode
+    4.3 Live Mode
+    4.4 Generate Customers
+    4.5 Exit Application
+
+5. Configuration variables
+
+Appendix. 
+    
+    Output of gcc -v
+
+
+---------------------------------------------------------------------
+---------------------------------------------------------------------
 
 # 1. Introduction
 
@@ -68,7 +82,7 @@ The project contains the following directories and files:
     -- the LaTeX source code for the report.
 
     stock.csv
-    -- a csv file containing the name, price, and intitial quantity (also the maximum allowable quantity) of each item in the shop's stock.
+    -- a csv file containing the name, price, and intitial quantity (also the maximum allowable quantity) of each item in the shop's stock. The first line of the file contains the shop's initial cash.
 
 3. Compilation and Execution
 
@@ -119,13 +133,62 @@ The project contains the following directories and files:
 
     The desired option is selected by typing the appropriate key followed by Enter.
 
-    4. Auto Mode
-       Auto mode continuously generates random customers with random shopping lists and budgets, and conducts a transaction for each item on the customer's shopping list. A shopping list consists of the name of an item and the quantity desired. The transactions are conducted in the order in which the items appear on the shopping list. After each transaction, the customer's budget, the shop's stock, and the shop's cash are all updated. 
+    4.1 Auto Mode
+        Auto mode continuously generates random customers with random shopping lists and budgets, and conducts a transaction for each item on the customer's shopping list. A shopping list consists of the name of an item and the quantity desired. The transactions are conducted in the order in which the items appear on the shopping list. After each transaction, the customer's budget, the shop's stock, and the shop's cash are all updated. A transaction is conductede using the following rules:
 
+            1. If an item is in stock, the shop's stock meets or exceeds the customer's desired quantity, and the customer's budget is sufficient, the item is purchased and the customer's budget, the shops cash, and the shop's stock are all updated.
 
+            2. If an item is in stock, the shop's stock meets or exceeds the customer's desired quantity, but the customer's budget is insufficient, The number of units the customer can afford is calculated and the item is purchased. The customer's budget, the shops cash, and the shop's stock are all updated.
 
+            3. If an item is in stock but the shop's stock is insufficient to provide the full quantity the customer requires then the customer purchases the entire remaining stock and the customer's budget and the shops cash and stock are updated appropriately.
 
+            4. If an item is not in stock (i.e. the stock is zero), then no purchase is made.
 
+        After each shop visit, the cutomer's receipt is displayed showing what items and quantities were purchased with subtotals and total.
+
+        Also after each shop visit the shop's stock list is displayed and any items the quantity of which falls below a reorder threshold - defined in the source file - are restocked. The restock consists of bringing the stock quantity back up to its initial level - defined in the stock.csv file.
+
+        Note that the same shop persists through the lifetime of the application run. Also note that, unlike a real shop, no markup is added to the prices of items - the shop sells everything at the same price it purchased it. This leads to the shop's cash balancing out at, using the default initial values, 3000-4000 euro over time.
+
+        Auto Mode continues until the user returns to the main menu which they can do at any time by pressing the 'Q' key followed by Enter.
+
+    4.2 Preset Mode
+        Preset mode operates identically to auto mode except that instead of generating random cutomers, cutomers are loaded from the customers.csv file (however the customers in the customers.csv file by default have, in fact, been randomly generated). After all customers have visited the shop's take for the day is displayed and the user is returned to the main menu.
+
+    4.3 Live Mode
+        In live mode the user plays the part of the customer. The user is first asked to enter their budget, after which they are guided through a series of transactions. Each transaction consists of selecting an item and quantity and then applying thwe transaction rules listed above in the normal way. When the user's budget has been depleted to the point where they can't afford anything in the shop, they are ejected by the shopkeeper.
+
+    4.4 Generate Customers
+        This option is used to generate lists of random customers to be used in preset mode. The number of customers to be generated, as well as all of the customer's attributes are specified in configuration variables in the source code. These variables are near the top of the source file in the Python and C versions of the code, and in a separate shop.properties file in the Java version (this is used to generate a Configuration class).
+
+        The attributes that can be adjusted are as follows. Where an atribute is a range then, for each customer, the specific random value is chosen from that range.
+
+            BUDGET_RANGE: The range from which the customer's budget is randomly selected. Default = 100-400.
+
+            ITEMS_RANGE: The number of items on the customers shopping list. Default = 1-5.
+
+            PIECES_RANGE: The quantity of each item on the customers shopping list. Default = 1-100.
+
+        The pregenerated lists held in the customers_greedy.csv, and customers_poor.csv files are the same as the defaults but adjusted as follows:
+
+            customers_poor BUDGET_RANGE = 10-100
+            customers_greedy PIECES_RANGE = 100-200
+
+        The customers_average.csv file was generated using the default attribute values.
+
+        The number of customers to be generated defaults to 5 and is passed as the first argument to the customer genertaion function.
+
+    4.5 Exit Application
+        The user can exit the application at any time by pressing the 'Q' key followed by Enter or the 'x' key on the main menu screen (or the '9' key in the Java version).
+
+5. Configuration variables
+    The application is configured by adjusting the values of configuration variables near the top of the source file in the Python and C versions, and in the shop.properties file in the Java version. The random customer generation variables are discussed in section 4.4 above and will not be listed again here. The remaining variables are:
+
+        STOCK_PATH: Path to the stock.csv file. Default = ./stock.csv.
+        NAMES_PATH: Path to a file containing a list of names from which to choose names for customers.
+        FACES_PATH (C and Java versions only): Path to a file containing ASCII art faces to be used for customers.
+        CUSTOMERS_PATH: Path to random customers file. Used for reading in customers for Preset Mode and wroting customers in Generate Customers Mode.
+        REORDER_THRESHOLD: The quantity below which an item is restocked by the shop. Default = 5.
 
 Appendix
 
@@ -142,8 +205,4 @@ Output of gcc -v
     Supported LTO compression algorithms: zlib zstd
     gcc version 11.1.0 (GCC) 
 
-customers_poor BUDGET_RANGE = (10, 100)
-custommers_greedy PIECES_RANGE = (100, 200)
-customers_average BUDGET_RANGE = (100, 400)
-ITEMS_RANGE = (1, 5)
-REORDER_THRESHOLD = 5
+
