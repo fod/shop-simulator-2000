@@ -84,7 +84,7 @@ public class ShopSim {
                     shop.doLiveMode(false);
                     break;
                 case 4:
-                    shop.generateCustomers();
+                    shop.generateCustomers(5);
                     break;
                 default:
                     System.out.println("Invalid selection.");

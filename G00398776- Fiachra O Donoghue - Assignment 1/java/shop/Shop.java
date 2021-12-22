@@ -1,6 +1,7 @@
 package shop;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,6 +10,7 @@ import java.nio.file.Paths;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.Scanner;
+import java.io.PrintWriter;
 
 public class Shop {
 
@@ -393,9 +395,26 @@ public class Shop {
         }
     } 
 
-    public void generateCustomers() {
-        // TODO Auto-generated method stub
+    public void generateCustomers(int numCustomers) {
+        String customersPath = System.getProperty("user.dir") + Configuration.CUSTOMERS_PATH;
+        try {
+            PrintWriter writer = new PrintWriter(customersPath, "UTF-8");
+            for (int i = 0; i < numCustomers; i++) {
+                Customer customer = randomCustomer();
+                writer.println(String.format("%s, %.2f", customer.getName(), customer.getBudget()));
+                for (ProductStock ps : customer.getShoppingList()) {
+                    writer.println(String.format("%s, %d", ps.getProduct().getName(), ps.getQuantity()));
+                }
+                writer.println("----------");
+            }
+        }
+        catch (IOException e) {
+            System.out.println("Error writing to file");
+        }
+
     }
+        
+    
 
     public void transact(Customer customer) {
         // Search for the item the customer is looking for in the shop's stock
