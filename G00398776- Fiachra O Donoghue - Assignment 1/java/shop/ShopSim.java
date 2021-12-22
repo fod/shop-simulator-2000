@@ -3,16 +3,22 @@ package shop;
 import java.util.Scanner;
 import java.io.IOException;
 
+/*
+ *  ShopSim.java
+ *  Main class for shop simulator
+ * 
+ */
 public class ShopSim {
 
     private static boolean splash = true;
-
+    // System.lineSeparator() -> platfrom independent newline 
     public static String shopkeeper = "       _www_ " + System.lineSeparator()
                           + "      /-o-o-\\  " + System.lineSeparator()
                           + "    (|   -   |) " + System.lineSeparator()
                           + "      \\ -=- /  " + System.lineSeparator()
                           + "      /`---'\\  " + System.lineSeparator();
 
+    // Splash screen - only appears once per run                      
     private static void splash() {
 
         Utility.clearConsole();
@@ -67,6 +73,7 @@ public class ShopSim {
         return selection;
     }
 
+    // show the main menu
     public static void menuControl() {
         // Shop csv file location is outside the project
         String stockPath = System.getProperty("user.dir") + Configuration.STOCK_PATH;
@@ -92,25 +99,6 @@ public class ShopSim {
             }
             selection = menu();
         }
-        // switch (selection) {
-        //     case 1:
-        //         shop.doAutoMode();
-        //         break;
-        //     case 2:
-        //         shop.doPresetMode();
-        //         break;
-        //     case 3:
-        //         shop.doLiveMode(false);
-        //         break;
-        //     // case 4:
-        //     //     shop.generateCustomers();
-        //     //     break;
-        //     case 9:
-        //         shop.goodbye();
-        //         break;
-        //     default:
-        //         break;
-        // }
     }
     public static void main(String[] args) {
 

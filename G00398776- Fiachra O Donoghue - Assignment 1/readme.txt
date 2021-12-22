@@ -6,7 +6,7 @@
           /`---'\
       How can I help?
 
- ##### Execution and use #####
+ ### Execution and use ###
 
 # CONTENTS #
 1. Introduction

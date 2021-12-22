@@ -10,6 +10,13 @@ import java.lang.StringBuilder;
 import java.io.IOException;
 import java.util.Random;
 
+/*
+*   Customer.java
+*   Class representing a single shop customer
+*   
+*/
+
+
 public class Customer {
     
     private String name;
@@ -18,6 +25,7 @@ public class Customer {
     private List<ProductStock> shoppingList;
     private List<ProductStock> receipt;
     
+    // Constructor for nameless customers -- gets random name
     public Customer(double budget, List<ProductStock> shoppingList) {
         this.name = randName();
         this.face = randFace();
@@ -26,6 +34,7 @@ public class Customer {
         this.receipt = new ArrayList<>();
     }
 
+    // Constructor for named customers - i.e. from file
     public Customer(String name, double budget, List<ProductStock> shoppingList) {
         this.name = name;
         this.face = randFace();
@@ -34,6 +43,7 @@ public class Customer {
         this.receipt = new ArrayList<>();
     }
 
+    // Constructor for customer without shopping list - i.e. for live mode
     public Customer(String name, double budget) {
         this.name = name;
         this.face = randFace();
@@ -42,60 +52,7 @@ public class Customer {
         this.receipt = new ArrayList<>();
     }
 
-    private String randName() {
-        String namePath = System.getProperty("user.dir") + Configuration.NAMES_PATH;
-        List<String> lines = Collections.emptyList();
-        List<String> names = new ArrayList<>();
-        try {
-            lines = Files.readAllLines(Paths.get(namePath), StandardCharsets.UTF_8);
-            for (String line : lines) {
-                names.add(line.trim());
-            }
-        } catch (IOException e) {
-            System.out.println("Cannot locate Names file");
-            e.printStackTrace();
-            System.exit(-1);
-        }
-        Random random = new Random(System.currentTimeMillis());
-        return names.get(random.nextInt(names.size()));
-    }
-
-    private String randFace() {
-        String facePath = System.getProperty("user.dir") + Configuration.FACES_PATH;
-        List<String> lines = Collections.emptyList();
-        List<String> faces = new ArrayList<>();
-		try {
-			lines = Files.readAllLines(Paths.get(facePath), StandardCharsets.UTF_8);
-            
-            StringBuilder sb = new StringBuilder();
-            boolean append = false;
-			for (String line : lines) {
-                // If line is not empty and append is false, then it is a new face
-                if ((line.trim().length() > 0) && !append) {
-                    sb.append(line + System.lineSeparator());
-                    append = true;
-                }
-                // If line is empty and append is true, then it is the end of a face
-                else if ((line.trim().length() == 0) && append) {
-                    faces.add(sb.toString());
-                    sb = new StringBuilder();
-                    append = false;
-                }
-                // If line is not empty and append is true, then it is part of a face
-                else if ((line.trim().length() > 0) && append) {
-                    sb.append(line + System.lineSeparator());
-                }
-			}
-		}
-		catch (IOException e) {
-			System.out.println("Cannot locate Faces file");
-			e.printStackTrace();
-			System.exit(-1);
-		}
-        Random random = new Random(System.currentTimeMillis());
-        return faces.get(random.nextInt(faces.size()));
-    }
-
+    // Getters and setters
     public String getName() {
         return this.name;
     }
@@ -136,16 +93,87 @@ public class Customer {
         return total;
     }
 
+    // Randomly generate a name
+    private String randName() {
+        // Get relative file path
+        String namePath = System.getProperty("user.dir") + Configuration.NAMES_PATH;
+        List<String> lines = Collections.emptyList();
+        List<String> names = new ArrayList<>();
+        try {
+            // Read entire file
+            lines = Files.readAllLines(Paths.get(namePath), StandardCharsets.UTF_8);
+            // extract names
+            for (String line : lines) {
+                names.add(line.trim());
+            }
+        } catch (IOException e) {
+            System.out.println("Cannot locate Names file");
+            e.printStackTrace();
+            System.exit(-1);
+        }
+        // Seed random with current time
+        Random random = new Random(System.currentTimeMillis());
+        // Return random name
+        return names.get(random.nextInt(names.size()));
+    }
+
+    // Randomly generate a face
+    private String randFace() {
+        // Get relative file path
+        String facePath = System.getProperty("user.dir") + Configuration.FACES_PATH;
+        List<String> lines = Collections.emptyList();
+        List<String> faces = new ArrayList<>();
+		try {
+            // Read entire file
+			lines = Files.readAllLines(Paths.get(facePath), StandardCharsets.UTF_8);
+            
+            // Build faces line by line
+            StringBuilder sb = new StringBuilder();
+            boolean append = false;
+			for (String line : lines) {
+                // If line is not empty and append is false, then it is a new face
+                if ((line.trim().length() > 0) && !append) {
+                    sb.append(line + System.lineSeparator());
+                    append = true;
+                }
+                // If line is empty and append is true, then it is the end of a face
+                else if ((line.trim().length() == 0) && append) {
+                    faces.add(sb.toString());
+                    sb = new StringBuilder();
+                    append = false;
+                }
+                // If line is not empty and append is true, then it is part of a face
+                else if ((line.trim().length() > 0) && append) {
+                    sb.append(line + System.lineSeparator());
+                }
+			}
+		}
+		catch (IOException e) {
+			System.out.println("Cannot locate Faces file");
+			e.printStackTrace();
+			System.exit(-1);
+		}
+        // Seed random with current time
+        Random random = new Random(System.currentTimeMillis());
+        // Return random face
+        return faces.get(random.nextInt(faces.size()));
+    }
+
+
+
     @Override
     public String toString() {
+        // Build customer display table line by line
         StringBuilder sb = new StringBuilder();
         sb.append(this.getFace() + System.lineSeparator());
         sb.append("Name: " + this.name + System.lineSeparator());
         sb.append(String.format("Budget: %.2f", this.budget) + System.lineSeparator());
+        // Call toStringWithTotal for shopping list display
         sb.append(this.toStringWithTotal(this.shoppingList));
         return sb.toString();
     }
 
+    // Build shopping list display wihtout total
     public String toString(List<ProductStock> bill) {
         StringBuilder sb = new StringBuilder();
         int count = 1;
@@ -156,6 +184,7 @@ public class Customer {
         return sb.toString();
     }
 
+    // Build shopping list display with total
     public String toStringWithTotal(List<ProductStock> bill) {
         StringBuilder sb = new StringBuilder();
         sb.append(Configuration.LINE_LONG + System.lineSeparator());

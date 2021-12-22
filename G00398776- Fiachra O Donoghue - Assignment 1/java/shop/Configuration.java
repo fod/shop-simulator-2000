@@ -2,6 +2,11 @@ package shop;
 
 import java.util.Properties;
 
+/*
+*   Configuration.java
+*   Auto generated config file from shop.properties
+*
+*/
 public class Configuration {
 
     private static final Properties properties = new Properties();

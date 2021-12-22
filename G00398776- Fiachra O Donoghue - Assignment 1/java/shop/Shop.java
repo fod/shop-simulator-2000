@@ -2,7 +2,6 @@ package shop;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.Writer;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,22 +10,35 @@ import java.nio.file.Paths;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.Scanner;
-import java.io.PrintWriter;
+
+/*
+*   Product.java
+*   Class representing the shop
+*   Most of the application logic is in this class
+* 
+*/
+
 
 public class Shop {
 
     private double cash;
     private List<ProductStock> stock;
 
+    // Only constructor for the shop - takes path to stock that csv file which 
+    // contains stock list plus quantities and prices plus shop starting cash amount
     public Shop(String fileName) {
 
         stock = new ArrayList<>();
         List<String> lines = Collections.emptyList();
 		try {
+            // Read entire file
 			lines = Files.readAllLines(Paths.get(fileName), StandardCharsets.UTF_8);
+            // Cash is in first line
 			cash = Double.parseDouble(lines.get(0));
 			// i am removing at index 0 as it is the only one treated differently
 			lines.remove(0);
+            // Split lines on comma into name, price and quantity and construct 
+            // a new Product and ProductStock for each item
 			for (String line : lines) {
 				String[] arr = line.split(",");
 				String name = arr[0];
@@ -45,6 +57,60 @@ public class Shop {
 		}
     }
 
+    // Get the shop cash amount
+    public double getCash() {
+        return this.cash;
+    }
+
+    // Get the shop stock
+    public List<ProductStock> getStock() {
+        return stock;
+    }     
+
+    @Override
+    public String toString() {
+        // Build a string with the stock list
+        StringBuilder sb = new StringBuilder();
+        sb.append(Configuration.LINE_MED + System.lineSeparator());
+        sb.append("  Item             Price        Stock" + System.lineSeparator());
+        sb.append(Configuration.LINE_MED + System.lineSeparator());
+        int count = 1;
+        for (ProductStock ps : stock) {
+            sb.append(count + " " + ps.toString() + System.lineSeparator());
+            count++;
+        }
+        sb.append(Configuration.LINE_MED + System.lineSeparator());
+        sb.append(System.lineSeparator());
+        sb.append(String.format("Shop's Cash: %17s%.2f%n", "€", cash));
+        sb.append(Configuration.LINE_MED + System.lineSeparator());
+        return sb.toString();
+    }
+
+    // Identify items that are below reorder threshold
+    private List<Product> checkStock(int reorder_threshold) {
+        List<Product> outOfStock = new ArrayList<>();
+        for (ProductStock ps : stock) {
+            if (ps.getQuantity() < reorder_threshold) {
+                outOfStock.add(ps.getProduct());
+            }
+        }
+        return outOfStock;
+    }
+
+    // Restock items that are below reorder threshold
+    private void restock(Product p) {
+        for (ProductStock ps : stock) {
+            if (ps.getProduct().equals(p)) {
+                int currentQuantity = ps.getQuantity();
+                ps.setQuantity(p.getMaxQuantity());
+                // Shop pays for restocking
+                this.cash -= p.getPrice() * (p.getMaxQuantity() - currentQuantity);
+            }
+        }
+    }
+
+
+    // Load customers from file for preset mode
     private List<Customer> loadCustomers(String fileName) {
         String fullPath = System.getProperty("user.dir") + fileName;
         List<Customer> customers = new ArrayList<>();
@@ -76,7 +142,7 @@ public class Shop {
                     // Find the product in the stock
                     for (ProductStock ps : stock) {
                         if (ps.getProduct().getName().equalsIgnoreCase(name)) {
-                             customers.get(customers.size() - 1).addToShoppingList(new ProductStock(ps.getProduct(), quantity));
+                                customers.get(customers.size() - 1).addToShoppingList(new ProductStock(ps.getProduct(), quantity));
                         }
                     }
                 }
@@ -88,59 +154,14 @@ public class Shop {
             System.exit(-1);
         }
         return customers;
-    }      
+    } 
 
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(Configuration.LINE_MED + System.lineSeparator());
-        sb.append("  Item             Price        Stock" + System.lineSeparator());
-        sb.append(Configuration.LINE_MED + System.lineSeparator());
-        int count = 1;
-        for (ProductStock ps : stock) {
-            sb.append(count + " " + ps.toString() + System.lineSeparator());
-            count++;
-        }
-        sb.append(Configuration.LINE_MED + System.lineSeparator());
-        sb.append(System.lineSeparator());
-        sb.append(String.format("Shop's Cash: %17s%.2f%n", "€", cash));
-        sb.append(Configuration.LINE_MED + System.lineSeparator());
-        return sb.toString();
-    }
-
-    public double getCash() {
-        return this.cash;
-    }
-
-    public List<ProductStock> getStock() {
-        return stock;
-    }
-
-    private List<Product> checkStock(int reorder_threshold) {
-        List<Product> outOfStock = new ArrayList<>();
-        for (ProductStock ps : stock) {
-            if (ps.getQuantity() < reorder_threshold) {
-                outOfStock.add(ps.getProduct());
-            }
-        }
-        return outOfStock;
-    }
-
-    private void restock(Product p) {
-        for (ProductStock ps : stock) {
-            if (ps.getProduct().equals(p)) {
-                int currentQuantity = ps.getQuantity();
-                ps.setQuantity(p.getMaxQuantity());
-                // Shop pays for restocking
-                this.cash -= p.getPrice() * (p.getMaxQuantity() - currentQuantity);
-            }
-        }
-    }
 
     // Shop is responsible for parts of customer that are dependent on it
     // Customer provides its own name and face
     private Customer randomCustomer() {
         Random random = new Random(System.currentTimeMillis());
+        // Budget, items, and pieces ranges are obtained from Configuration class
         double budget = random.nextDouble() * (Configuration.BUDGET_MAX - Configuration.BUDGET_MIN) + Configuration.BUDGET_MIN;
         int numItems = random.nextInt(Configuration.ITEMS_MIN, Configuration.ITEMS_MAX + 1);
         List<ProductStock> shoppingList = new ArrayList<>();
@@ -154,6 +175,148 @@ public class Shop {
         return customer;
     }
 
+    // Generate random cutomers and write to file
+    public void generateCustomers(int numCustomers) {
+        System.out.println("Generating customers...");
+        String customersPath = System.getProperty("user.dir") + Configuration.CUSTOMERS_PATH;
+        PrintWriter writer = null;
+        try {
+            writer = new PrintWriter(customersPath, "UTF-8");
+            for (int i = 0; i < numCustomers; i++) {
+                Customer customer = randomCustomer();
+                writer.println(String.format("%s,%.2f", customer.getName(), customer.getBudget()));
+                for (ProductStock ps : customer.getShoppingList()) {
+                    writer.println(String.format("%s,%d", ps.getProduct().getName(), ps.getQuantity()));
+                }
+                writer.println("----------");
+            }
+        }
+        catch (IOException e) {
+            System.out.println("Error writing to file");
+        }
+        finally {
+            writer.close();
+            System.out.println("Customers generated.");
+            System.out.println("Press Enter to continue");
+            Utility.waitForInput();
+        }
+
+    }
+
+    // A transaction
+    public void transact(Customer customer) {
+        // Search for the item the customer is looking for in the shop's stock
+        for (ProductStock ps : stock) {
+            for (ProductStock itemstock : customer.getShoppingList()) {
+                // If it's found...
+                if (ps.getProduct().equals(itemstock.getProduct())) {
+                    // If the customer wants more than the shop can supply...
+                    if (itemstock.getQuantity() > ps.getQuantity()) {
+                        System.out.println(String.format("%s wants %d x %s but only %d are available.", 
+                            customer.getName(), itemstock.getQuantity(), itemstock.getProduct().getName(), ps.getQuantity()));
+                            // The customer reduces the quantity they want to buy to what they can get
+                            itemstock.setQuantity(ps.getQuantity());
+                    }
+                    // If the customer can' afford all they want, the amount they can afford is calculated
+                    if (customer.getBudget() < itemstock.getCost()) {
+                        itemstock.setQuantity((int)(customer.getBudget() / itemstock.getUnitPrice()));
+
+                        if (itemstock.getQuantity() == 0) {
+                            System.out.println(String.format("%s can't afford any %s.", customer.getName(), itemstock.getProduct().getName()));
+                        }
+                        else {
+                            System.out.println(String.format("%s can only afford %d x %s.", customer.getName(), itemstock.getQuantity(), itemstock.getProduct().getName()));
+                        }
+
+                    }
+                    // The transaction...
+                    System.out.println(String.format("%s buys %d x %s for %.2f.", 
+                        customer.getName(), itemstock.getQuantity(), itemstock.getProduct().getName(), itemstock.getCost()));
+                    // Deduct stock from shop
+                    ps.setQuantity(ps.getQuantity() - itemstock.getQuantity());
+                    // Deduct money from customer
+                    customer.setBudget(customer.getBudget() - itemstock.getCost());
+                    // Add money to shop
+                    cash += itemstock.getCost();
+                    // Add purchase to customer's receipt
+                    customer.addToReceipt(itemstock);
+                    System.out.println(String.format("%s has  €%.2f left.%n", customer.getName(), customer.getBudget()));
+                }
+            }
+        }
+        if (Utility.contOrQuit()) {
+            ShopSim.menuControl();
+        }
+        Utility.clearConsole();
+        System.out.println(ShopSim.shopkeeper);
+        System.out.println(String.format("Thank you %s. Here's your receipt. %nPlease come again.", customer.getName()));
+        System.out.println(customer.toStringWithTotal(customer.getReceipt()));
+    }
+
+    // A visit to the shop
+    public double shopVisit(Customer customer) {
+        double cacheCash = this.getCash();
+        Utility.clearConsole();
+        System.out.println(String.format("%s has come into the shop with a shopping list!%n", customer.getName()));
+        System.out.println(customer);
+        if (Utility.contOrQuit()) {
+            ShopSim.menuControl();
+        }
+
+        // Start shopping
+        Utility.clearConsole();
+        System.out.println(customer.getFace());
+        System.out.println(String.format("%s is shopping", customer.getName()));
+        transact(customer);
+        if (Utility.contOrQuit()) {
+            return 0;
+        }
+
+        // Check stock levels
+        Utility.clearConsole();
+        System.out.println(ShopSim.shopkeeper);
+        System.out.println(String.format("Better take a look in the stockroom.%n%n"));
+        List<Product> outOfStock = this.checkStock(Configuration.REORDER_THRESHOLD);
+        if (Utility.contOrQuit()) {
+            ShopSim.menuControl();
+        }
+        Utility.clearConsole();
+        System.out.println(ShopSim.shopkeeper);
+        if (outOfStock.size() > 0) {
+            System.out.println("The following items are out of stock:");
+            for (int i = 0; i < outOfStock.size(); i++) {
+                System.out.println(String.format("%s%n", outOfStock.get(i).getName()));
+            }
+            System.out.println(this);
+            if (Utility.contOrQuit()) {
+                ShopSim.menuControl();
+            }
+
+            // Restock
+            Utility.clearConsole();
+            System.out.println(ShopSim.shopkeeper);
+            for (Product p : outOfStock) {
+                System.out.println(String.format("Restocking %s...%n", p.getName()));
+                restock(p);
+            }
+        }
+        else {
+            System.out.println(String.format("Everything seems to be ok.%n"));
+        }
+
+        System.out.println(this);
+        if (Utility.contOrQuit()) {
+            ShopSim.menuControl();
+        }
+        Utility.clearConsole();
+
+        // Calculate the shops take and return it
+        double take = this.getCash() - cacheCash;
+        return take;
+
+    }
+
+    // Auto mode - generate infinite random customers and send them to the shop
     public void doAutoMode() {
         while (true) {
             Customer customer = randomCustomer();
@@ -161,6 +324,7 @@ public class Shop {
         }
     }
 
+    // Preset mode - load customers from file and perform sho pvisit with each
     public void doPresetMode() {
         double totalTake = 0;
         List<Customer> customers = loadCustomers(Configuration.CUSTOMERS_PATH);
@@ -395,144 +559,5 @@ public class Shop {
             }
         }
     } 
-
-    public void generateCustomers(int numCustomers) {
-        System.out.println("Generating customers...");
-        String customersPath = System.getProperty("user.dir") + Configuration.CUSTOMERS_PATH;
-        PrintWriter writer = null;
-        try {
-            writer = new PrintWriter(customersPath, "UTF-8");
-            for (int i = 0; i < numCustomers; i++) {
-                Customer customer = randomCustomer();
-                writer.println(String.format("%s,%.2f", customer.getName(), customer.getBudget()));
-                for (ProductStock ps : customer.getShoppingList()) {
-                    writer.println(String.format("%s,%d", ps.getProduct().getName(), ps.getQuantity()));
-                }
-                writer.println("----------");
-            }
-        }
-        catch (IOException e) {
-            System.out.println("Error writing to file");
-        }
-        finally {
-            writer.close();
-            System.out.println("Customers generated.");
-            System.out.println("Press Enter to continue");
-            Utility.waitForInput();
-        }
-
-    }
-        
-    
-
-    public void transact(Customer customer) {
-        // Search for the item the customer is looking for in the shop's stock
-        for (ProductStock ps : stock) {
-            for (ProductStock itemstock : customer.getShoppingList()) {
-                // If it's found...
-                if (ps.getProduct().equals(itemstock.getProduct())) {
-                    // If the customer wants more than the shop can supply...
-                    if (itemstock.getQuantity() > ps.getQuantity()) {
-                        System.out.println(String.format("%s wants %d x %s but only %d are available.", 
-                            customer.getName(), itemstock.getQuantity(), itemstock.getProduct().getName(), ps.getQuantity()));
-                            // The customer reduces the quantity they want to buy to what they can get
-                            itemstock.setQuantity(ps.getQuantity());
-                    }
-                    // If the customer can' afford all they want, the amount they can afford is calculated
-                    if (customer.getBudget() < itemstock.getCost()) {
-                        itemstock.setQuantity((int)(customer.getBudget() / itemstock.getUnitPrice()));
-
-                        if (itemstock.getQuantity() == 0) {
-                            System.out.println(String.format("%s can't afford any %s.", customer.getName(), itemstock.getProduct().getName()));
-                        }
-                        else {
-                            System.out.println(String.format("%s can only afford %d x %s.", customer.getName(), itemstock.getQuantity(), itemstock.getProduct().getName()));
-                        }
-
-                    }
-                    // The transaction...
-                    System.out.println(String.format("%s buys %d x %s for %.2f.", 
-                        customer.getName(), itemstock.getQuantity(), itemstock.getProduct().getName(), itemstock.getCost()));
-                    // Deduct stock from shop
-                    ps.setQuantity(ps.getQuantity() - itemstock.getQuantity());
-                    // Deduct money from customer
-                    customer.setBudget(customer.getBudget() - itemstock.getCost());
-                    // Add money to shop
-                    cash += itemstock.getCost();
-                    // Add purchase to customer's receipt
-                    customer.addToReceipt(itemstock);
-                    System.out.println(String.format("%s has  €%.2f left.%n", customer.getName(), customer.getBudget()));
-                }
-            }
-        }
-        if (Utility.contOrQuit()) {
-            ShopSim.menuControl();
-        }
-        Utility.clearConsole();
-        System.out.println(ShopSim.shopkeeper);
-        System.out.println(String.format("Thank you %s. Here's your receipt. %nPlease come again.", customer.getName()));
-        System.out.println(customer.toStringWithTotal(customer.getReceipt()));
-    }
-
-    public double shopVisit(Customer customer) {
-        double cacheCash = this.getCash();
-        Utility.clearConsole();
-        System.out.println(String.format("%s has come into the shop with a shopping list!%n", customer.getName()));
-        System.out.println(customer);
-        if (Utility.contOrQuit()) {
-            ShopSim.menuControl();
-        }
-
-        Utility.clearConsole();
-        System.out.println(customer.getFace());
-        System.out.println(String.format("%s is shopping", customer.getName()));
-
-        transact(customer);
-
-        if (Utility.contOrQuit()) {
-            return 0;
-        }
-
-        // Check stock levels
-        Utility.clearConsole();
-        System.out.println(ShopSim.shopkeeper);
-        System.out.println(String.format("Better take a look in the stockroom.%n%n"));
-        List<Product> outOfStock = this.checkStock(Configuration.REORDER_THRESHOLD);
-        if (Utility.contOrQuit()) {
-            ShopSim.menuControl();
-        }
-        Utility.clearConsole();
-        System.out.println(ShopSim.shopkeeper);
-        if (outOfStock.size() > 0) {
-            System.out.println("The following items are out of stock:");
-            for (int i = 0; i < outOfStock.size(); i++) {
-                System.out.println(String.format("%s%n", outOfStock.get(i).getName()));
-            }
-            System.out.println(this);
-            if (Utility.contOrQuit()) {
-                ShopSim.menuControl();
-            }
-            Utility.clearConsole();
-            System.out.println(ShopSim.shopkeeper);
-            for (Product p : outOfStock) {
-                System.out.println(String.format("Restocking %s...%n", p.getName()));
-                restock(p);
-            }
-        }
-        else {
-            System.out.println(String.format("Everything seems to be ok.%n"));
-        }
-
-        System.out.println(this);
-        if (Utility.contOrQuit()) {
-            ShopSim.menuControl();
-        }
-        Utility.clearConsole();
-
-        double take = this.getCash() - cacheCash;
-
-        return take;
-
-    }
     
 }

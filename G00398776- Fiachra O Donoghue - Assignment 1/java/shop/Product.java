@@ -1,5 +1,11 @@
 package shop;
 
+/*
+*   Product.java
+*   Class representing a single Product
+* 
+*/
+
 public class Product {
     private String name;
     private double price;

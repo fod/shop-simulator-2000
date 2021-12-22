@@ -1,5 +1,12 @@
 package shop;
 
+
+/*
+*   Product.java
+*   Class representing a the stock of a product in the shop
+* 
+*/
+
 public class ProductStock {
     
     private Product product;
