@@ -40,44 +40,38 @@ This project attempts to simulate some aspects of the purchase and sale of items
 
 The project contains the following directories and files:
 
-    c/
-    -- A directory containing the C source code. Details of the contents of this directory can be found in the C-specific section below (section 3.2).
+```c/```\
+A directory containing the C source code. Details of the contents of this directory can be found in the C-specific section below (section 3.2).
 
-    java/ 
-    -- A directory containing the Java source code. Details of the contents of this directory can be found in the Java-specific section below (section 3.3).
+```java/```\
+A directory containing the Java source code. Details of the contents of this directory can be found in the Java-specific section below (section 3.3).
 
-    python/ 
-    -- A directory containing the Python source code. Details of the contents of this directory can be found in the Python-specific section below (section 3.1).
+```python/```\
+A directory containing the Python source code. Details of the contents of this directory can be found in the Python-specific section below (section 3.1).
 
-    customers_average.csv 
-    -- A csv file containing the name, budget, and shopping list for five randomly generated customers of middling means and demands.
+```customers_average.csv```\
+A csv file containing the name, budget, and shopping list for five randomly generated customers of middling means and demands.
 
-    customers_greedy.csv 
-    -- A csv file containing the name, budget and shopping list for five randomly generated customers of with requirements for high numbers of each item on their shopping list.
+```customers_greedy.csv```\
+A csv file containing the name, budget and shopping list for five randomly generated customers of with requirements for high numbers of each item on their shopping list.
 
-    customers_poor.csv 
-    -- A csv file containing the name, budget and shopping list for five randomly generated customers low budgets.
+```customers_poor.csv```\
+A csv file containing the name, budget and shopping list for five randomly generated customers low budgets.
 
-    customers.csv
-    -- A csv file containing the name, budget, and shopping list for each of sex randomly generated customers; two from each of the preceding customers files.
+```customers.csv```\
+A csv file containing the name, budget, and shopping list for each of sex randomly generated customers; two from each of the preceding customers files.
 
-    faces 
-    -- a plaintext file containing ascii art faces for the shop customers.
+```faces```\
+A plaintext file containing ascii art faces for the shop customers.
 
-    names.list 
-    -- a plaintext file containing a list of names for the shop customers.
+```names.list```\
+A plaintext file containing a list of names for the shop customers.
 
-    readme.txt 
-    -- this file.
+```README.md```\
+This file.
 
-    report.pdf 
-    -- a PDF file containing an description of the differences and similarities between the different implementations of the project.
-
-    report.tex 
-    -- the LaTeX source code for the report.
-
-    stock.csv
-    -- a csv file containing the name, price, and intitial quantity (also the maximum allowable quantity) of each item in the shop's stock. The first line of the file contains the shop's initial cash.
+```stock.csv```\
+A csv file containing the name, price, and intitial quantity (also the maximum allowable quantity) of each item in the shop's stock. The first line of the file contains the shop's initial cash.
 
 ## 3. Compilation and Execution
 
